@@ -21,12 +21,13 @@ typedef struct {
     pthread_t thread;
     int socket;
     char name[32];/*define macro*/
-} player_t;
+    /*othello_room_t * room;*/
+} othello_player_t;
 
 typedef struct {
-    player_t players[2];/*define macro*/
+    othello_player_t players[2];/*define macro*/
     int players_size;
-} room_t;
+} othello_room_t;
 
 /*------------------------------------------------------*/
 void renvoi (int sock) {
@@ -60,9 +61,33 @@ void renvoi (int sock) {
 }
 /*------------------------------------------------------*/
 
-void * otel_connect(void * player) {
-    renvoi(((player_t*)player)->socket);
-    close(((player_t*)player)->socket);
+int othello_connect(othello_player_t * player) {
+    return 0;
+}
+
+int othello_list_room(othello_player_t * player) {
+    return 0;
+}
+
+int othello_join_room(othello_player_t * player) {
+    return 0;
+}
+
+int othello_leave_room(othello_player_t * player) {
+    return 0;
+}
+
+int othello_send_message(othello_player_t * player) {
+    return 0;
+}
+
+int othello_play_turn(othello_player_t * player) {
+    return 0;
+}
+
+void * othello_start(void * player) {
+    renvoi(((othello_player_t*)player)->socket);
+    close(((othello_player_t*)player)->socket);
     free(player);
 
     return NULL;
@@ -134,7 +159,7 @@ int main(int argc, char **argv) {
     /* attente des connexions et traitement des donnees recues */
     for(;;) {
 
-        player_t * player = malloc(sizeof(player_t));
+        othello_player_t * player = malloc(sizeof(othello_player_t));
         if(player == NULL) {
             perror("erreur : malloc");
             exit(1);
@@ -164,7 +189,7 @@ int main(int argc, char **argv) {
         /* traitement du message */
         printf("reception d'un message.\n");
 
-        status = pthread_create(&(player->thread), NULL, otel_connect, player);
+        status = pthread_create(&(player->thread), NULL, othello_start, player);
         if(status) {
             perror("erreur : pthread_create");
             exit(1);
