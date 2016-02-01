@@ -5,17 +5,13 @@ Serveur à lancer avant le client
 #include <stdio.h>
 #include <linux/types.h>     /* pour les sockets */
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <unistd.h>
 #include <netdb.h>         /* pour hostent, servent */
 #include <string.h>         /* pour bcopy, ... */  
 #include <pthread.h>
 
 #define TAILLE_MAX_NOM 256
-
-typedef struct sockaddr sockaddr;
-typedef struct sockaddr_in sockaddr_in;
-typedef struct hostent hostent;
-typedef struct servent servent;
 
 typedef struct {
     pthread_t thread;
@@ -25,8 +21,10 @@ typedef struct {
 } othello_player_t;
 
 typedef struct {
-    othello_player_t players[2];/*define macro*/
+    othello_player_t * players[2];/*define macro*/
     int players_size;
+    /*mutex*/
+    char othellier[8][8];
 } othello_room_t;
 
 /*------------------------------------------------------*/
@@ -93,113 +91,58 @@ void * othello_start(void * player) {
     return NULL;
 }
 
-/*------------------------------------------------------*/
-int main(int argc, char **argv) {
-  
-    int socket_descriptor,         /* descripteur de socket */
-        nouv_socket_descriptor,     /* [nouveau] descripteur de socket */
-        longueur_adresse_courante,
-        status;     /* longueur d'adresse courante d'un client */
-    sockaddr_in adresse_locale,         /* structure d'adresse locale*/
-                adresse_client_courant;     /* adresse client courant */
-    hostent * ptr_hote;             /* les infos recuperees sur la machine hote */
-    servent * ptr_service;             /* les infos recuperees sur le service de la machine */
-    char machine[TAILLE_MAX_NOM+1];     /* nom de la machine locale */
-    
-    gethostname(machine,TAILLE_MAX_NOM);        /* recuperation du nom de la machine */
-    
-    /* recuperation de la structure d'adresse en utilisant le nom */
-    if ((ptr_hote = gethostbyname(machine)) == NULL) {
-        perror("erreur : impossible de trouver le serveur a partir de son nom.");
-        exit(1);
-    }
-    
-    /* initialisation de la structure adresse_locale avec les infos recuperees */            
-    
-    /* copie de ptr_hote vers adresse_locale */
-    bcopy((char*)ptr_hote->h_addr, (char*)&adresse_locale.sin_addr, ptr_hote->h_length);
-    adresse_locale.sin_family        = ptr_hote->h_addrtype;     /* ou AF_INET */
-    adresse_locale.sin_addr.s_addr    = INADDR_ANY;             /* ou AF_INET */
+int create_socket_stream(unsigned short port) {
+    int sock;
+    struct sockaddr_in address;
 
-    /* 2 facons de definir le service que l'on va utiliser a distance */
-    /* (commenter l'une ou l'autre des solutions) */
-    
-    /*-----------------------------------------------------------*/
-    /* SOLUTION 1 : utiliser un service existant, par ex. "irc" */
-    /*
-    if ((ptr_service = getservbyname("irc","tcp")) == NULL) {
-        perror("erreur : impossible de recuperer le numero de port du service desire.");
-        exit(1);
-    }
-    adresse_locale.sin_port = htons(ptr_service->s_port);
-    */
-    /*-----------------------------------------------------------*/
-    /* SOLUTION 2 : utiliser un nouveau numero de port */
-    adresse_locale.sin_port = htons(5000);
-    /*-----------------------------------------------------------*/
-    
-    printf("numero de port pour la connexion au serveur : %d \n", 
-           ntohs(adresse_locale.sin_port) /*ntohs(ptr_service->s_port)*/);
-    
-    /* creation de la socket */
-    if ((socket_descriptor = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        perror("erreur : impossible de creer la socket de connexion avec le client.");
-        exit(1);
+    if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        perror("socket");
+        return -1;
     }
 
-    /* association du socket socket_descriptor à la structure d'adresse adresse_locale */
-    if ((bind(socket_descriptor, (sockaddr*)(&adresse_locale), sizeof(adresse_locale))) < 0) {
-        perror("erreur : impossible de lier la socket a l'adresse de connexion.");
-        exit(1);
-    }
-    
-    /* initialisation de la file d'ecoute */
-    listen(socket_descriptor,5);
+    memset(&address, 0, sizeof(struct sockaddr_in));
+    address.sin_family = AF_INET;
+    address.sin_port = htons(port);
+    address.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    /* attente des connexions et traitement des donnees recues */
+    if(bind(sock, (struct sockaddr *) & address, sizeof(struct sockaddr_in)) < 0) {
+        close(sock);
+        perror("bind");
+        return -1;
+    }
+
+    return sock;
+}
+
+int main(int argc, char * argv[]) {
+    int sock;
+    othello_player_t * player;
+
+    if((sock = create_socket_stream(5000)) < 0) {
+        perror("create_socket_stream");
+        return 1;
+    }
+
+    listen(sock, 5);
+
     for(;;) {
-
-        othello_player_t * player = malloc(sizeof(othello_player_t));
-        if(player == NULL) {
-            perror("erreur : malloc");
-            exit(1);
+        if((player = malloc(sizeof(othello_player_t))) == NULL) {
+            perror("malloc");
+            return 1;
         }
-    
-        longueur_adresse_courante = sizeof(adresse_client_courant);
-        
-        /* adresse_client_courant sera renseigné par accept via les infos du connect */
-        /*if ((nouv_socket_descriptor =
-            accept(socket_descriptor, 
-                   (sockaddr*)(&adresse_client_courant),
-                   &longueur_adresse_courante))
-             < 0) {
-            perror("erreur : impossible d'accepter la connexion avec le client.");
-            exit(1);
-        }*/
 
-        if ((player->socket =
-                    accept(socket_descriptor,
-                           (sockaddr*)(&adresse_client_courant),
-                           &longueur_adresse_courante))
-                     < 0) {
-                    perror("erreur : impossible d'accepter la connexion avec le client.");
-                    exit(1);
-                }
-        
-        /* traitement du message */
-        printf("reception d'un message.\n");
-
-        status = pthread_create(&(player->thread), NULL, othello_start, player);
-        if(status) {
-            perror("erreur : pthread_create");
-            exit(1);
+        if ((player->socket = accept(sock, NULL, NULL)) < 0) {
+            perror("accept");
+            return 1;
         }
-        
-        /*renvoi(nouv_socket_descriptor);*/
 
-        /*close(nouv_socket_descriptor);*/
-        
+        if(pthread_create(&(player->thread), NULL, othello_start, player)) {
+            perror("pthread_create");
+            return 1;
+        }
     }
+
+    close(sock);
 
     return 0;
 }
