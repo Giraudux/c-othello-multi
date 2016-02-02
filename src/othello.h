@@ -4,23 +4,23 @@
 
 #define OTHELLO_BOARD_LENGTH 8
 
-enum othello_code_e {
-    CONNECT,
-    LIST_ROOM,
-    JOIN_ROOM,
-    CREATE_ROOM,
-    LEAVE_ROOM,
-    SEND_MESSAGE,
-    READY,
-    PLAY_TURN
+enum othello_query_e {
+    OTHELLO_QUERY_CONNECT,
+    OTHELLO_QUERY_LIST_ROOM,
+    OTHELLO_QUERY_JOIN_ROOM,
+    OTHELLO_QUERY_CREATE_ROOM,
+    OTHELLO_QUERY_LEAVE_ROOM,
+    OTHELLO_QUERY_SEND_MESSAGE,
+    OTHELLO_QUERY_READY,
+    OTHELLO_QUERY_PLAY_TURN
 };
 
 enum othello_state_e {
-    NOT_CONNECTED,
-    CONNECTED,
-    IN_ROOM,
-    IN_GAME
+    OTHELLO_STATE_NOT_CONNECTED,
+    OTHELLO_STATE_CONNECTED,
+    OTHELLO_STATE_IN_ROOM,
+    OTHELLO_STATE_IN_GAME
 };
 
-typedef enum othello_code_e othello_code_t;
+typedef enum othello_query_e othello_query_t;
 typedef enum othello_state_e othello_state_t;
