@@ -1,31 +1,40 @@
 /*----------------------------------------------
 Serveur à lancer avant le client
 ------------------------------------------------*/
-#include <stdlib.h>
-#include <stdio.h>
-#include <linux/types.h>     /* pour les sockets */
-#include <sys/socket.h>
 #include <netinet/in.h>
-#include <unistd.h>
-#include <netdb.h>         /* pour hostent, servent */
-#include <string.h>         /* pour bcopy, ... */  
 #include <pthread.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+#include "othello.h"
 
 #define TAILLE_MAX_NOM 256
 
-typedef struct {
+struct othello_player_s;
+struct othello_room_s;
+
+struct othello_player_s {
     pthread_t thread;
     int socket;
     char name[32];/*define macro*/
-    /*othello_room_t * room;*/
-} othello_player_t;
+    struct othello_room_s * room;
+    bool ready;
+    enum othello_state_e state;
+};
 
-typedef struct {
-    othello_player_t * players[2];/*define macro*/
+struct othello_room_s {
+    struct othello_player_s * players[2];/*define macro*/
     int players_size;
-    /*mutex*/
-    char othellier[8][8];
-} othello_room_t;
+    pthread_mutex_t mutex;
+    char othellier[OTHELLO_BOARD_LENGTH][OTHELLO_BOARD_LENGTH];
+};
+
+typedef struct othello_player_s othello_player_t;
+typedef struct othello_room_s othello_room_t;
 
 /*------------------------------------------------------*/
 void renvoi (int sock) {
