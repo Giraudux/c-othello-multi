@@ -20,7 +20,7 @@ struct othello_player_s {
     int socket;
     char name[32];/*define macro*/
     struct othello_room_s * room;
-    pthread_mutex_t mutex;/*useless ? Must think about it. (read solve the problem)*/
+    pthread_mutex_t mutex;
     bool ready;
     enum othello_state_e state;
 };
@@ -157,6 +157,28 @@ int othello_play_turn(othello_player_t * player) {
     return 0;
 }
 
+void othello_end(othello_player_t * player) {
+    int i;
+
+    /*leave room*/
+    if(player->room != NULL) {
+        pthread_mutex_lock(&(player->room->mutex));
+        for(i = 0; i < 2; i++) {
+            if(player->room->players[i] == player) {
+                player->room->players[i] = NULL;
+                break;
+            }
+        }
+        pthread_mutex_unlock(&(player->room->mutex));
+    }
+    /*close socket*/
+    close(player->socket);
+    /*free memory*/
+    free(player);
+    /*exit thread*/
+    /*pthread_cancel(&(player->thread));*/
+}
+
 void * othello_start(void * player) {
     char query_code;
 
@@ -171,8 +193,7 @@ void * othello_start(void * player) {
     }
 
     /*leave room if player in one*/
-    close(((othello_player_t*)player)->socket);
-    free(player);
+    othello_end((othello_player_t*) player);
 
     return NULL;
 }
