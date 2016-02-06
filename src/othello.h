@@ -2,7 +2,11 @@
  *
  */
 
+#ifndef OTHELLO_H
+#define OTHELLO_H
+
 #define OTHELLO_BOARD_LENGTH 8
+#define OTHELLO_NUMBER_OF_ROOMS 32
 
 enum othello_query_e {
     OTHELLO_QUERY_CONNECT,
@@ -24,9 +28,12 @@ enum othello_state_e {
 
 enum othello_status_e {
     OTHELLO_SUCCESS,
-    OTHELLO_BLA_ERROR
+    OTHELLO_ROOM_FULL_ERROR,
+    OTHELLO_ROOM_UNKNOWN_ERROR
 };
 
 typedef enum othello_query_e othello_query_t;
 typedef enum othello_state_e othello_state_t;
 typedef enum othello_status_e othello_status_t;
+
+#endif
