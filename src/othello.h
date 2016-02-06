@@ -22,5 +22,11 @@ enum othello_state_e {
     OTHELLO_STATE_IN_GAME
 };
 
+enum othello_status_e {
+    OTHELLO_SUCCESS,
+    OTHELLO_BLA_ERROR
+};
+
 typedef enum othello_query_e othello_query_t;
 typedef enum othello_state_e othello_state_t;
+typedef enum othello_status_e othello_status_t;

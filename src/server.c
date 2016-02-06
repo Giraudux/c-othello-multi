@@ -69,36 +69,6 @@ void renvoi (int sock) {
 }
 /*------------------------------------------------------*/
 
-int othello_connect(othello_player_t * player) {
-    /*read message length*/
-    /*read message*/
-    /*check player state*/
-    /*if player state and player name ok then update player state*/
-    /*else send error ?*/
-
-    return 0;
-}
-
-int othello_list_room(othello_player_t * player) {
-    return 0;
-}
-
-int othello_join_room(othello_player_t * player) {
-    return 0;
-}
-
-int othello_leave_room(othello_player_t * player) {
-    return 0;
-}
-
-int othello_send_message(othello_player_t * player) {
-    return 0;
-}
-
-int othello_play_turn(othello_player_t * player) {
-    return 0;
-}
-
 /**
  * \return the result of the last call to read
  */
@@ -125,6 +95,47 @@ ssize_t othello_write_all(int fd, void * buf, size_t count) {
     }
 
     return bytes_write;
+}
+
+int othello_connect(othello_player_t * player) {
+    /*read message length*/
+    char name_length;
+    char reply[2];
+    othello_read_all(player->socket, &name_length, 1);
+    /*TODO: check length + check read*/
+    /*read message*/
+    othello_read_all(player->socket, player->name, name_length);
+    /*check player state*/
+    /*if player state and player name ok then update player state*/
+    /*else send error ?*/
+
+    pthread_mutex_lock(&(player->mutex));
+    reply[0] = OTHELLO_QUERY_CONNECT;
+    reply[1] = OTHELLO_SUCCESS;
+    othello_write_all(player->socket, reply, 2);
+    pthread_mutex_unlock(&(player->mutex));
+
+    return 0;
+}
+
+int othello_list_room(othello_player_t * player) {
+    return 0;
+}
+
+int othello_join_room(othello_player_t * player) {
+    return 0;
+}
+
+int othello_leave_room(othello_player_t * player) {
+    return 0;
+}
+
+int othello_send_message(othello_player_t * player) {
+    return 0;
+}
+
+int othello_play_turn(othello_player_t * player) {
+    return 0;
 }
 
 void * othello_start(void * player) {
@@ -187,8 +198,15 @@ int main(int argc, char * argv[]) {
             return 1;
         }
 
+        memset(player, 0, sizeof(othello_player_t));
+
         if ((player->socket = accept(sock, NULL, NULL)) < 0) {
             perror("accept");
+            return 1;
+        }
+
+        if(pthread_mutex_init(&(player->mutex), NULL)) {
+            perror("pthread_mutex_init");
             return 1;
         }
 
