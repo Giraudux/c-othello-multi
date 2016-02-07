@@ -176,7 +176,7 @@ void othello_end(othello_player_t * player) {
     /*free memory*/
     free(player);
     /*exit thread*/
-    /*pthread_cancel(&(player->thread));*/
+    pthread_exit(NULL);
 }
 
 void * othello_start(void * player) {
@@ -229,14 +229,14 @@ int main(int argc, char * argv[]) {
     for(i = 0; i < OTHELLO_NUMBER_OF_ROOMS; i++) {
         if(pthread_mutex_init(&(rooms[i].mutex), NULL)) {
             perror("pthread_mutex_init");
-            return 1;
+            return EXIT_FAILURE;
         }
     }
 
 
     if((sock = othello_create_socket_stream(5000)) < 0) {
         perror("othello_create_socket_stream");
-        return 1;
+        return EXIT_FAILURE;
     }
 
     listen(sock, 5);
@@ -244,28 +244,28 @@ int main(int argc, char * argv[]) {
     for(;;) {
         if((player = malloc(sizeof(othello_player_t))) == NULL) {
             perror("malloc");
-            return 1;
+            return EXIT_FAILURE;
         }
 
         memset(player, 0, sizeof(othello_player_t));
 
         if ((player->socket = accept(sock, NULL, NULL)) < 0) {
             perror("accept");
-            return 1;
+            return EXIT_FAILURE;
         }
 
         if(pthread_mutex_init(&(player->mutex), NULL)) {
             perror("pthread_mutex_init");
-            return 1;
+            return EXIT_FAILURE;
         }
 
         if(pthread_create(&(player->thread), NULL, othello_start, player)) {
             perror("pthread_create");
-            return 1;
+            return EXIT_FAILURE;
         }
     }
 
     close(sock);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
