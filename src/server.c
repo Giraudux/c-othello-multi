@@ -40,9 +40,9 @@ static othello_room_t rooms[OTHELLO_NUMBER_OF_ROOMS];
  * \return the result of the last call to read
  */
 ssize_t othello_read_all(int fd, void * buf, size_t count) {
-    ssize_t bytes_read;
+    ssize_t bytes_read = 0;
 
-    while((bytes_read = read(fd, buf, count)) > 0 && count > 0) {
+    while(count > 0 && (bytes_read = read(fd, buf, count)) > 0) {
         count -= bytes_read;
         buf += bytes_read;
     }
@@ -54,9 +54,9 @@ ssize_t othello_read_all(int fd, void * buf, size_t count) {
  * \return the result of the last call to write
  */
 ssize_t othello_write_all(int fd, void * buf, size_t count) {
-    ssize_t bytes_write;
+    ssize_t bytes_write = 0;
 
-    while((bytes_write = write(fd, buf, count)) > 0 && count > 0) {
+    while(count > 0 && (bytes_write = write(fd, buf, count)) > 0) {
         count -= bytes_write;
         buf += bytes_write;
     }
