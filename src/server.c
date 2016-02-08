@@ -18,7 +18,7 @@ struct othello_room_s;
 struct othello_player_s {
     pthread_t thread;
     int socket;
-    char name[32];/*define macro*/
+    char name[OTHELLO_PLAYER_NAME_LENGTH];
     struct othello_room_s * room;
     pthread_mutex_t mutex;
     bool ready;
@@ -26,7 +26,7 @@ struct othello_player_s {
 };
 
 struct othello_room_s {
-    struct othello_player_s * players[2];/*define macro*/
+    struct othello_player_s * players[OTHELLO_ROOM_LENGTH];
     pthread_mutex_t mutex;
     char othellier[OTHELLO_BOARD_LENGTH][OTHELLO_BOARD_LENGTH];
 };
@@ -88,6 +88,15 @@ int othello_connect(othello_player_t * player) {
 }
 
 int othello_list_room(othello_player_t * player) {
+    int i;
+    unsigned char reply[2 + 2 * OTHELLO_PLAYER_NAME_LENGTH) * OTHELLO_NUMBER_OF_ROOMS];
+
+    reply[0] = OTHELLO_QUERY_LIST_ROOM
+
+    pthread_mutex_lock(&(player->mutex));
+    othello_write_all(player->socket, reply, 1 + (2 + 2 * OTHELLO_PLAYER_NAME_LENGTH) * OTHELLO_NUMBER_OF_ROOMS);
+    pthread_mutex_unlock(&(player->mutex));
+
     return 0;
 }
 
@@ -105,7 +114,7 @@ int othello_join_room(othello_player_t * player) {
         reply[1] = OTHELLO_ROOM_FULL_ERROR;
 
         pthread_mutex_lock(&(rooms[room_id].mutex));
-        for(i = 0; i < 2; i++) {
+        for(i = 0; i < OTHELLO_ROOM_LENGTH; i++) {
             if(rooms[room_id].players[i] == NULL) {
                 rooms[room_id].players[i] = player;
                 player->room = &(rooms[room_id]);
@@ -133,7 +142,7 @@ int othello_leave_room(othello_player_t * player) {
     /*TODO: check player/room*/
 
     pthread_mutex_lock(&(player->room->mutex));
-    for(i = 0; i < 2; i++) {
+    for(i = 0; i < OTHELLO_ROOM_LENGTH; i++) {
         if(player->room->players[i] == player) {
             player->room->players[i] = NULL;
             break;
@@ -163,7 +172,7 @@ void othello_end(othello_player_t * player) {
     /*leave room*/
     if(player->room != NULL) {
         pthread_mutex_lock(&(player->room->mutex));
-        for(i = 0; i < 2; i++) {
+        for(i = 0; i < OTHELLO_ROOM_LENGTH; i++) {
             if(player->room->players[i] == player) {
                 player->room->players[i] = NULL;
                 break;
@@ -171,6 +180,9 @@ void othello_end(othello_player_t * player) {
         }
         pthread_mutex_unlock(&(player->room->mutex));
     }
+
+    /*TODO: manage if player in game*/
+
     /*close socket*/
     close(player->socket);
     /*free memory*/
