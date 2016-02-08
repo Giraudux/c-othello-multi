@@ -88,14 +88,14 @@ int othello_connect(othello_player_t * player) {
 }
 
 int othello_list_room(othello_player_t * player) {
-    int i;
-    unsigned char reply[2 + 2 * OTHELLO_PLAYER_NAME_LENGTH) * OTHELLO_NUMBER_OF_ROOMS];
+    /*int i;
+    unsigned char reply[2 + (2 * OTHELLO_PLAYER_NAME_LENGTH) * OTHELLO_NUMBER_OF_ROOMS];
 
     reply[0] = OTHELLO_QUERY_LIST_ROOM
 
     pthread_mutex_lock(&(player->mutex));
     othello_write_all(player->socket, reply, 1 + (2 + 2 * OTHELLO_PLAYER_NAME_LENGTH) * OTHELLO_NUMBER_OF_ROOMS);
-    pthread_mutex_unlock(&(player->mutex));
+    pthread_mutex_unlock(&(player->mutex));*/
 
     return 0;
 }
@@ -159,10 +159,33 @@ int othello_leave_room(othello_player_t * player) {
 }
 
 int othello_send_message(othello_player_t * player) {
+    int i;
+    unsigned char reply[1 + OTHELLO_PLAYER_NAME_LENGTH + OTHELLO_MESSAGE_LENGTH];
+    othello_player_t * other_player;
+
+    reply[0] = OTHELLO_QUERY_SEND_MESSAGE;
+    memcpy(reply + 1, player->name, OTHELLO_PLAYER_NAME_LENGTH);
+    othello_read_all(player->socket, reply + 1 + OTHELLO_PLAYER_NAME_LENGTH, OTHELLO_MESSAGE_LENGTH);
+
+    if(player->room != NULL) {
+        pthread_mutex_lock(&(player->room->mutex));
+        for(i = 0; i < OTHELLO_ROOM_LENGTH; i++) {
+            other_player = player->room->players[i];
+            if(other_player != NULL && other_player != player) {
+                pthread_mutex_lock(&(other_player->mutex));
+                othello_write_all(other_player->socket, reply, sizeof(reply));
+                pthread_mutex_unlock(&(other_player->mutex));
+            }
+        }
+        pthread_mutex_unlock(&(player->room->mutex));
+    }
+
     return 0;
 }
 
 int othello_play_turn(othello_player_t * player) {
+
+
     return 0;
 }
 
