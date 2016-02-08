@@ -31,6 +31,7 @@ enum othello_state_e {
 
 enum othello_status_e {
     OTHELLO_SUCCESS,
+    OTHELLO_FAILURE,
     OTHELLO_ROOM_FULL_ERROR,
     OTHELLO_ROOM_UNKNOWN_ERROR
 };
