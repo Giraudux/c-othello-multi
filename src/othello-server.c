@@ -2,10 +2,15 @@
  * \author Alexis Giraudet
  */
 
+#ifdef OTHELLO_WITH_SYSLOG
+#define _BSD_SOURCE
+#endif
+
 #include <netinet/in.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -13,12 +18,7 @@
 #include <syslog.h>
 
 #include "othello.h"
-
-struct othello_player_s;
-struct othello_room_s;
-
-typedef struct othello_player_s othello_player_t;
-typedef struct othello_room_s othello_room_t;
+#include "othello-server.h"
 
 struct othello_player_s {
     pthread_t thread;
@@ -66,6 +66,47 @@ ssize_t othello_write_all(int fd, void * buf, size_t count) {
 
     /*check and end here ?*/
     return bytes_write;
+}
+
+void othello_log(int priority, const char * format, ...) {
+    va_list ap;
+
+    va_start(ap, format);
+#ifdef OTHELLO_WITH_SYSLOG
+    vsyslog(priority, format, ap);
+#else
+    switch(priority) {
+        case LOG_EMERG:
+            fputs("EMERGENCY ", stdout);
+            break;
+        case LOG_ALERT:
+            fputs("ALERT     ", stdout);
+            break;
+        case LOG_CRIT:
+            fputs("CRITICAL  ", stdout);
+            break;
+        case LOG_ERR:
+            fputs("ERROR     ", stdout);
+            break;
+        case LOG_WARNING:
+            fputs("WARNING   ", stdout);
+            break;
+        case LOG_NOTICE:
+            fputs("NOTICE    ", stdout);
+            break;
+        case LOG_INFO:
+            fputs("INFO      ", stdout);
+            break;
+        case LOG_DEBUG:
+            fputs("DEBUG     ", stdout);
+            break;
+        default:
+            fputs("          ", stdout);
+            break;
+    }
+    vprintf(format, ap);
+    putc('\n', stdout);
+#endif
 }
 
 void othello_end(othello_player_t * player) {
@@ -326,7 +367,7 @@ int othello_create_socket_stream(unsigned short port) {
     struct sockaddr_in address;
 
     if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        perror("socket");
+        othello_log(LOG_ERR, "socket");
         return -1;
     }
 
@@ -337,7 +378,7 @@ int othello_create_socket_stream(unsigned short port) {
 
     if(bind(sock, (struct sockaddr *) & address, sizeof(struct sockaddr_in)) < 0) {
         close(sock);
-        perror("bind");
+        othello_log(LOG_ERR, "bind");
         return -1;
     }
 
@@ -347,7 +388,9 @@ int othello_create_socket_stream(unsigned short port) {
 void othello_exit() {
     if(sock != 0)
         close(sock);
+#ifdef OTHELLO_WITH_SYSLOG
     closelog();
+#endif
 }
 
 int main(int argc, char * argv[]) {
@@ -355,25 +398,24 @@ int main(int argc, char * argv[]) {
     int i;
 
     sock = 0;
+#ifdef OTHELLO_WITH_SYSLOG
+    openlog(NULL, LOG_CONS | LOG_PID, LOG_USER);
+#endif
 
     if(atexit(othello_exit))
         return EXIT_FAILURE;
 
-    openlog(NULL, LOG_CONS, LOG_USER);
-
-    syslog(LOG_INFO, "test0");
-
     memset(rooms, 0, sizeof(othello_room_t) * OTHELLO_NUMBER_OF_ROOMS);
     for(i = 0; i < OTHELLO_NUMBER_OF_ROOMS; i++) {
         if(pthread_mutex_init(&(rooms[i].mutex), NULL)) {
-            perror("pthread_mutex_init");
+            othello_log(LOG_ERR, "pthread_mutex_init");
             return EXIT_FAILURE;
         }
     }
 
 
     if((sock = othello_create_socket_stream(5000)) < 0) {
-        perror("othello_create_socket_stream");
+        othello_log(LOG_ERR, "othello_create_socket_stream");
         return EXIT_FAILURE;
     }
 
@@ -381,29 +423,27 @@ int main(int argc, char * argv[]) {
 
     for(;;) {
         if((player = malloc(sizeof(othello_player_t))) == NULL) {
-            perror("malloc");
+            othello_log(LOG_ERR, "malloc");
             return EXIT_FAILURE;
         }
 
         memset(player, 0, sizeof(othello_player_t));
 
         if ((player->socket = accept(sock, NULL, NULL)) < 0) {
-            perror("accept");
+            othello_log(LOG_ERR, "accept");
             return EXIT_FAILURE;
         }
 
         if(pthread_mutex_init(&(player->mutex), NULL)) {
-            perror("pthread_mutex_init");
+            othello_log(LOG_ERR, "pthread_mutex_init");
             return EXIT_FAILURE;
         }
 
         if(pthread_create(&(player->thread), NULL, othello_start, player)) {
-            perror("pthread_create");
+            othello_log(LOG_ERR, "pthread_create");
             return EXIT_FAILURE;
         }
     }
-
-    close(sock);
 
     return EXIT_SUCCESS;
 }
