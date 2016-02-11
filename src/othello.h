@@ -22,6 +22,13 @@ enum othello_query_e {
     OTHELLO_QUERY_PLAY_TURN
 };
 
+enum othello_notification_e {
+    OTHELLO_NOTIFICATION_MESSAGE,
+    OTHELLO_NOTIFICATION_READY,
+    OTHELLO_NOTIFICATION_STROKE
+    /*player leave, game start, game end (winner?)*/
+};
+
 enum othello_state_e {
     OTHELLO_STATE_NOT_CONNECTED,
     OTHELLO_STATE_CONNECTED,
@@ -39,6 +46,7 @@ enum othello_status_e {
 };
 
 typedef enum othello_query_e othello_query_t;
+typedef enum othello_notification_e othello_notification_t;
 typedef enum othello_state_e othello_state_t;
 typedef enum othello_status_e othello_status_t;
 
