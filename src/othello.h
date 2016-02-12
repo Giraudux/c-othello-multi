@@ -12,6 +12,7 @@
 #define OTHELLO_MESSAGE_LENGTH 256
 
 enum othello_query_e {
+/*deprecated
     OTHELLO_QUERY_CONNECT,
     OTHELLO_QUERY_LIST_ROOM,
     OTHELLO_QUERY_JOIN_ROOM,
@@ -20,13 +21,24 @@ enum othello_query_e {
     OTHELLO_QUERY_SEND_MESSAGE,
     OTHELLO_QUERY_READY,
     OTHELLO_QUERY_PLAY_TURN
+*/
+    OTHELLO_QUERY_CONNECT,
+    OTHELLO_QUERY_ROOM_LIST,
+    OTHELLO_QUERY_ROOM_JOIN,
+    OTHELLO_QUERY_ROOM_LEAVE,
+    OTHELLO_QUERY_MESSAGE,
+    OTHELLO_QUERY_READY,
+    OTHELLO_QUERY_PLAY
 };
 
-enum othello_notification_e {
-    OTHELLO_NOTIFICATION_MESSAGE,
-    OTHELLO_NOTIFICATION_READY,
-    OTHELLO_NOTIFICATION_STROKE
-    /*player leave, game start, game end (winner?)*/
+enum othello_notif_e {
+    OTHELLO_NOTIF_ROOM_JOIN,
+    OTHELLO_NOTIF_ROOM_LEAVE,
+    OTHELLO_NOTIF_MESSAGE,
+    OTHELLO_NOTIF_READY,
+    OTHELLO_NOTIF_PLAY,
+    OTHELLO_NOTIF_GAME_START,
+    OTHELLO_NOTIF_GAME_END
 };
 
 enum othello_state_e {
@@ -43,10 +55,11 @@ enum othello_status_e {
 	OTHELLO_GAME_FINISH,
     OTHELLO_ROOM_FULL_ERROR,
     OTHELLO_ROOM_UNKNOWN_ERROR
+    /*...*/
 };
 
 typedef enum othello_query_e othello_query_t;
-typedef enum othello_notification_e othello_notification_t;
+typedef enum othello_notif_e othello_notif_t;
 typedef enum othello_state_e othello_state_t;
 typedef enum othello_status_e othello_status_t;
 
