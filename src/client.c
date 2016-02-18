@@ -309,8 +309,36 @@ void* othello_write_thread(void* sock){
 }
 
 void* othello_read_thread(void* sock){
-	int socket_desctiptor = *((int*)sock);
+	int socket_descriptor = *((int*)sock);
+	char server_answer_type;
 	for(;;){
-		
+		/*othello_read_mesg(socket_descriptor,&server_answer_type,1);
+		switch(client_state){
+			case OTHELLO_QUERY_CONNECT:
+				othello_server_connect(socket_descriptor);
+			break;
+			case OTHELLO_QUERY_ROOM_LIST:
+				othello_choose_room(socket_descriptor);
+			break;
+			case OTHELLO_QUERY_ROOM_JOIN:
+				othello_send_ready(socket_descriptor);
+			break;
+			case OTHELLO_QUERY_ROOM_LEAVE:
+				// messages?
+			break;
+			case OTHELLO_QUERY_MESSAGE:
+				othello_send_move(socket_descriptor);
+			break;
+			case OTHELLO_QUERY_READY:
+				// messages?
+				printf(".");
+				sleep(1);
+			break;
+			case OTHELLO_QUERY_PLAY;
+			
+			break;
+			default:
+			break;
+		}*/
 	}
 }
