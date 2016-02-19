@@ -45,10 +45,11 @@ static int sock;
  */
 ssize_t othello_read_all(int fd, void * buf, size_t count) {
     ssize_t bytes_read = 0;
+    char * cursor = buf;
 
-    while(count > 0 && (bytes_read = read(fd, buf, count)) > 0) {
+    while(count > 0 && (bytes_read = read(fd, cursor, count)) > 0) {
         count -= bytes_read;
-        buf += bytes_read;
+        cursor += bytes_read;
     }
 
     return bytes_read;
@@ -59,10 +60,11 @@ ssize_t othello_read_all(int fd, void * buf, size_t count) {
  */
 ssize_t othello_write_all(int fd, void * buf, size_t count) {
     ssize_t bytes_write = 0;
+    char * cursor = buf;
 
-    while(count > 0 && (bytes_write = write(fd, buf, count)) > 0) {
+    while(count > 0 && (bytes_write = write(fd, cursor, count)) > 0) {
         count -= bytes_write;
-        buf += bytes_write;
+        cursor += bytes_write;
     }
 
     return bytes_write;
@@ -138,7 +140,7 @@ void othello_end(othello_player_t * player) {
     pthread_exit(NULL);
 }
 
-int othello_connect(othello_player_t * player) {
+int othello_handle_connect(othello_player_t * player) {
     unsigned char reply[2];
     int status;
 
@@ -170,7 +172,7 @@ int othello_connect(othello_player_t * player) {
 }
 
 /*TODO: add room id*/
-int othello_list_room(othello_player_t * player) {
+int othello_handle_room_list(othello_player_t * player) {
     unsigned char reply[1 + (1 + OTHELLO_ROOM_LENGTH * OTHELLO_PLAYER_NAME_LENGTH) * OTHELLO_NUMBER_OF_ROOMS];
     unsigned char * cursor;
     othello_room_t * room;
@@ -207,7 +209,7 @@ int othello_list_room(othello_player_t * player) {
     return status;
 }
 
-int othello_join_room(othello_player_t * player) {
+int othello_handle_room_join(othello_player_t * player) {
     unsigned char room_id;
     char reply[2];
     char notif[1 + OTHELLO_PLAYER_NAME_LENGTH];
@@ -253,7 +255,7 @@ int othello_join_room(othello_player_t * player) {
     return status;
 }
 
-int othello_leave_room(othello_player_t * player) {
+int othello_handle_room_leave(othello_player_t * player) {
     unsigned char reply[2];
     unsigned char notif[1 + OTHELLO_PLAYER_NAME_LENGTH];
     othello_room_t * room;
@@ -296,7 +298,7 @@ int othello_leave_room(othello_player_t * player) {
     return status;
 }
 
-int othello_send_message(othello_player_t * player) {
+int othello_handle_message(othello_player_t * player) {
     unsigned char reply[2];
     unsigned char notif[1 + OTHELLO_PLAYER_NAME_LENGTH + OTHELLO_MESSAGE_LENGTH];
     othello_player_t * other_player;
@@ -342,7 +344,7 @@ int othello_send_message(othello_player_t * player) {
     return status;
 }
 
-int othello_ready(othello_player_t * player) {
+int othello_handle_ready(othello_player_t * player) {
     unsigned char ready;
 
     /*TODO: check player's state*/
@@ -361,7 +363,7 @@ int othello_ready(othello_player_t * player) {
     return 0;
 }
 
-int othello_play(othello_player_t * player) {
+int othello_handle_play(othello_player_t * player) {
     unsigned char stroke[2];
 
     /*TODO: check player state*/
@@ -388,25 +390,25 @@ void * othello_start(void * arg) {
         /*pthread_mutex_lock(&(player->mutex));*/
         switch(query) {
         case OTHELLO_QUERY_CONNECT:
-            status = othello_connect(player);
+            status = othello_handle_connect(player);
             break;
         case OTHELLO_QUERY_ROOM_LIST:
-            status = othello_list_room(player);
+            status = othello_handle_room_list(player);
             break;
         case OTHELLO_QUERY_ROOM_JOIN:
-            status = othello_list_room(player);
+            status = othello_handle_room_join(player);
             break;
         case OTHELLO_QUERY_ROOM_LEAVE:
-            status = othello_leave_room(player);
+            status = othello_handle_room_leave(player);
             break;
         case OTHELLO_QUERY_MESSAGE:
-            status = othello_send_message(player);
+            status = othello_handle_message(player);
             break;
         case OTHELLO_QUERY_READY:
-            status = othello_ready(player);
+            status = othello_handle_ready(player);
             break;
         case OTHELLO_QUERY_PLAY:
-            status = othello_play(player);
+            status = othello_handle_play(player);
             break;
         default:
             status = OTHELLO_FAILURE;
@@ -457,10 +459,12 @@ void othello_exit() {
 
 int main(int argc, char * argv[]) {
     othello_player_t * player;
+    unsigned short port;
     int i;
 
     /* init global */
     /* init socket */
+    port = 5000;
     sock = -1;
 #ifdef OTHELLO_WITH_SYSLOG
     openlog(NULL, LOG_CONS | LOG_PID, LOG_USER);
@@ -479,7 +483,7 @@ int main(int argc, char * argv[]) {
     }
 
     /* open socket */
-    if((sock = othello_create_socket_stream(5000)) < 0) {
+    if((sock = othello_create_socket_stream(port)) < 0) {
         othello_log(LOG_ERR, "othello_create_socket_stream");
         return EXIT_FAILURE;
     }
