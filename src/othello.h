@@ -5,6 +5,8 @@
 #ifndef OTHELLO_H
 #define OTHELLO_H
 
+#include <sys/types.h>
+
 #define OTHELLO_BOARD_LENGTH 8
 #define OTHELLO_NUMBER_OF_ROOMS 32
 #define OTHELLO_PLAYER_NAME_LENGTH 32
