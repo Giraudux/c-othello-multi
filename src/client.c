@@ -15,8 +15,7 @@ client <adresse-serveur> <message-a-transmettre>
 
 othello_client_state_t client_state;
 char othello_board[OTHELLO_BOARD_LENGTH][OTHELLO_BOARD_LENGTH];
-char color;
-char ennemy_color;
+char my_color;
 
 int main(int argc, char **argv) {
     int socket_descriptor; /* socket descriptor */
@@ -24,12 +23,7 @@ int main(int argc, char **argv) {
     hostent* ptr_host; /* host machine informations */
     //servent* ptr_service; /* service informations */
 
-	//char user_input[15]; /* gathers the user inputs */
-	
-	pthread_t thread_write;
-
-	//othello_status_t state;
-	//othello_notif_t notif;   
+	pthread_t thread_write; 
 
 	while((ptr_host = othello_ask_server_adress()) == NULL){
 		printf("Impossible to find a server at this adress, please try again :");
@@ -55,40 +49,11 @@ int main(int argc, char **argv) {
 	
 	printf("connexion succed ! \n");
 
-	
 	if(pthread_create(&thread_write, NULL, othello_write_thread, &socket_descriptor)) {
 		//othello_log(LOG_ERR, "pthread_create");
 		return EXIT_FAILURE;
     }
 
-
-	/*
-	while((state = othello_choose_nickname(socket_descriptor)) != OTHELLO_SUCCESS){
-		printf("Invalid nickname, try again : ");	
-	}	
-
-	for(;;){
-		
-
-		while((state = othello_choose_room(socket_descriptor)) != OTHELLO_SUCCESS){
-			printf("Invalid room ID, try again : ");	
-		}
-
-
-		while((state = othello_ask_ready(socket_descriptor)) != OTHELLO_SUCCESS){
-			printf("Server can't ready you, try again : ");	
-		}
-
-
-		while((notif = othello_other_ready(socket_descriptor)) != OTHELLO_NOTIF_READY){
-			printf("Waiting for player 2 to be ready ... ");
-		}
-	
-
-		while((state = othello_play_turn(socket_descriptor)) != OTHELLO_GAME_FINISH){
-			printf("Player 2 is playing ... ");
-		}
-	}*/
 	(void) pthread_join(thread_write, NULL);
 	close(socket_descriptor);
 
@@ -101,6 +66,39 @@ hostent* othello_ask_server_adress(){
 	printf("Welcome, please enter the server adresse : ");
 	if(othello_read_user_input(user_input,sizeof user_input)>0){exit(1);}
 	return gethostbyname(user_input);
+}
+
+void othello_init_board(char color){
+	int i,j;	
+	my_color = color;
+	for (i = 0; i < OTHELLO_BOARD_LENGTH; ++i){
+		for(j = 0; j < OTHELLO_BOARD_LENGTH; ++j){
+			othello_board[i][j] = '*';
+		}
+	}
+	othello_board[OTHELLO_BOARD_LENGTH/2 - 1][OTHELLO_BOARD_LENGTH/2 - 1] = 'o';
+	othello_board[OTHELLO_BOARD_LENGTH/2 - 1][OTHELLO_BOARD_LENGTH/2] = 'x';
+	othello_board[OTHELLO_BOARD_LENGTH/2][OTHELLO_BOARD_LENGTH/2 - 1] = 'x';
+	othello_board[OTHELLO_BOARD_LENGTH/2][OTHELLO_BOARD_LENGTH/2] = 'o';
+}
+
+void othello_display_board(char color){
+	int i,j;
+
+	printf("   ");
+	for (i = 0; i < OTHELLO_BOARD_LENGTH; ++i){
+		printf("%c",i+1);
+	}
+	printf("\n  _\n |");
+	for (i = 0; i < OTHELLO_BOARD_LENGTH; ++i){
+		printf("_");
+	}
+	for (i = 0; i < OTHELLO_BOARD_LENGTH; ++i){
+		printf("\n%c| ",(char)(i+65));
+		for(j = 0; j < OTHELLO_BOARD_LENGTH; ++j){
+			printf("%c",othello_board[i][j]);
+		}
+	}
 }
 
 bool othello_is_number(char* str){
@@ -163,19 +161,16 @@ void othello_shift_array_left(char* arr,size_t arr_size,int nb_shift){
 	for(i = 0; i < arr_size - nb_shift; ++i){
 		arr[i] = arr[i+nb_shift-1];
 	}
-	memset(arr,arr_size-nb_shift+1,arr_size);
+	arr[arr_size-nb_shift-1] = '\0';
 }
 
 void othello_choose_nickname(int socket_descriptor){
 	char user_input[9];
-	//char answer[1];
 
 	printf("Choose a nickname : ");
 	if(othello_read_user_input(user_input,sizeof user_input)==0){
 		othello_create_user_request(user_input,sizeof user_input,OTHELLO_QUERY_CONNECT);
 		othello_write_mesg(socket_descriptor,user_input);
-		//othello_read_mesg(socket_descriptor,answer,sizeof answer);
-		//return answer[0];
 		client_state = OTHELLO_CLIENT_STATE_WAITING;
 		printf("Waiting for server answer ");
 	}
@@ -183,7 +178,6 @@ void othello_choose_nickname(int socket_descriptor){
 
 void othello_choose_room(int socket_descriptor){
 	char user_input[4];
-	//char answer[OTHELLO_NUMBER_OF_ROOMS*32+1];
 
 	printf("Type a room ID or 'list' to display the list of them : ");
 	if(othello_read_user_input(user_input,sizeof user_input)==0){
@@ -200,18 +194,11 @@ void othello_choose_room(int socket_descriptor){
 		}else{
 			printf("Invalid input !\n");
 		}
-		//othello_read_mesg(socket_descriptor,answer,sizeof answer);
-		/*if(answer[0]==OTHELLO_QUERY_ROOM_LIST){
-			printf("Rooms list : ...\n");
-			//call room list
-		}*/
 	}
-	//return answer[0];
 }
 
 void othello_send_ready(int socket_descriptor){
 	char user_input[6];
-	//char answer[1];
 	if(othello_read_user_input(user_input,sizeof user_input)==0){
 		if(strcmp(user_input,"ready")!=0){
 			printf("Invalid input!\n");
@@ -220,8 +207,6 @@ void othello_send_ready(int socket_descriptor){
 			othello_write_mesg(socket_descriptor,user_input);
 		}
 	}
-	//othello_read_mesg(socket_descriptor,answer,sizeof answer);
-	//return answer[0];
 }
 
 othello_notif_t othello_other_ready(int socket_descriptor){
@@ -229,21 +214,7 @@ othello_notif_t othello_other_ready(int socket_descriptor){
 	othello_read_mesg(socket_descriptor,answer,sizeof answer);
 	return answer[0];
 }
-/*
-othello_status_t othello_play_turn(int socket_descriptor){
-	char answer[37]; // maximum 18 tokens returned *2 for x/y coords + 1 for header
-	othello_status_t state;
-	othello_read_mesg(socket_descriptor,answer,sizeof answer);
-	if(answer[0] == OTHELLO_NOTIF_PLAY){ // player 2 just played
-		othello_return_tokens(answer);
-		othello_display_moves();
-		while((state = othello_send_move(socket_descriptor)) != OTHELLO_SUCCESS){
-			printf("You can't play here according to the server ...\n");
-		}
-	}
-	return answer[0];
-}
-*/
+
 void othello_return_tokens(char* moves,char color){
 	int i = 1;
 	while(moves[i] != '\0'){
@@ -266,18 +237,17 @@ void othello_display_moves(){
 
 void othello_send_move(int socket_descriptor){
 	char user_input[3];
-	//char answer[1];
+
 	printf("Type your move : ");
 	if(othello_read_user_input(user_input,sizeof user_input)==0){
-		if( ((int)user_input[0] < 65) || ((int)user_input[0] > 72) ||  ((int)user_input[0] < 49) || ((int)user_input[0] > 56) ){ /* A1 to H8 */
+		if( ((int)user_input[0] < 65) || ((int)user_input[0] > 72) ||  ((int)user_input[1] < 49) || ((int)user_input[1] > 56) ){ /* A1 to H8 */
 			printf("The coordinate are out of board, please try again : ");
-			//if(othello_read_user_input(user_input,sizeof user_input)>0){exit(1);}
 		}else{
+			user_input[0] = (char)((int)user_input[0] - 17); // A -> 0, B -> 1, etc ...
+			user_input[1] = (char)((int)user_input[1] - 1); // 1 -> 0, 2 -> 1, 3-> 2, etc...
 			othello_create_user_request(user_input,sizeof user_input,OTHELLO_QUERY_PLAY);
 			othello_write_mesg(socket_descriptor,user_input);
 		}
-		//othello_read_mesg(socket_descriptor,answer,sizeof answer);
-		//return answer[0];
 	}
 }
 
@@ -297,7 +267,7 @@ void othello_server_room_list(int socket_descriptor){
 	printf("List of rooms :");
 }
 void othello_server_room_join(int socket_descriptor){
-	char server_answer[2];
+	char server_answer[3];
 	othello_read_mesg(socket_descriptor,server_answer,sizeof(server_answer));
 	if(server_answer[1] == 1){
 		client_state = OTHELLO_CLIENT_STATE_INROOM;
@@ -325,18 +295,18 @@ void othello_server_play(int socket_descriptor){
 	if(server_answer[1] == 1){
 		client_state = OTHELLO_CLIENT_STATE_WAITING;
 		printf("Votre coup a été validé\n");
-		othello_notif_play(socket_descriptor,color,4);
+		othello_notif_play(socket_descriptor);
 	}else{
 		printf("Votre coup est invalide ...\n");
 	}
 }
 
-void othello_notif_play(int socket_descriptor,char color,int array_shift){
-	char server_answer[39]; // max 3*6*2 tokens returned + 2 for the new token + 1 for the msg header
+void othello_notif_play(int socket_descriptor){
+	char server_answer[40]; // max of 3*6*2 tokens returned + 2 for the new token + 1 for the color of the player + 1 for the msg header
 	othello_read_mesg(socket_descriptor,server_answer,sizeof(server_answer));
-	othello_board[server_answer[1]][server_answer[2]] = color;
-	othello_shift_array_left(server_answer,sizeof(server_answer),array_shift);
-	othello_return_tokens(server_answer,color);
+	othello_board[server_answer[2]][server_answer[3]] = server_answer[1];
+	othello_shift_array_left(server_answer,sizeof(server_answer),4);
+	othello_return_tokens(server_answer,server_answer[1]);
 }
 
 void* othello_write_thread(void* sock){
@@ -394,7 +364,6 @@ void* othello_read_thread(void* sock){
 				othello_server_room_join(socket_descriptor);
 			break;
 			case OTHELLO_QUERY_ROOM_LEAVE:
-				// messages?
 			break;
 			case OTHELLO_QUERY_MESSAGE:
 				othello_server_message(socket_descriptor);
@@ -406,8 +375,8 @@ void* othello_read_thread(void* sock){
 				othello_server_play(socket_descriptor);
 			break;
 			case OTHELLO_NOTIF_PLAY:
-				printf("Ennemy player just player\n");
-				othello_notif_play(socket_descriptor,ennemy_color,3);
+				printf("Ennemy played just played\n");
+				othello_notif_play(socket_descriptor);
 			break;
 			default:
 			break;
