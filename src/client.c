@@ -405,7 +405,7 @@ void* othello_read_thread(void* sock){
 			case OTHELLO_QUERY_PLAY:
 				othello_server_play(socket_descriptor);
 			break;
-			case OTHELLO_NOTIF_GAME_END:
+			case OTHELLO_NOTIF_PLAY:
 				printf("Ennemy player just player\n");
 				othello_notif_play(socket_descriptor,ennemy_color,3);
 			break;
