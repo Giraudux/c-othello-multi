@@ -365,7 +365,7 @@ void othello_shift_array(char* arr,size_t arr_size){
 }
 
 void othello_choose_nickname(int socket_descriptor){
-	char user_input[10];
+	char user_input[32];
 
 	printf("Choose a nickname : ");
 	if(othello_read_user_input(user_input,sizeof user_input)==0){
