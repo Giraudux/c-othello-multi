@@ -63,12 +63,13 @@ int main(int argc, char **argv) {
 }
 
 hostent* othello_ask_server_adress(){
-	char user_input[15];
-	printf("Welcome, please enter the server adresse : ");
-	if(othello_read_user_input(user_input,sizeof user_input)==0){
+	char* user_input = "78.226.157.77";
+	
+	//printf("Welcome, please enter the server adresse : ");
+	//if(othello_read_user_input(user_input,sizeof user_input)==0){
 		return gethostbyname(user_input);
-	}
-	return NULL;
+	//}
+	//return NULL;
 }
 
 void othello_init_board(char color){
@@ -308,46 +309,48 @@ void othello_create_user_request(char* usr_input, size_t input_size, othello_que
 
 int othello_read_user_input(char* usr_input, size_t input_size){
 	char* cleaner;
+
 	fgets(usr_input,input_size,stdin);
 	//removing '\n' added when user press ENTER to validate the input
 	cleaner = usr_input;
 	while(*cleaner!='\0'){
 		if(*cleaner=='\n'){
 			*cleaner='\0';
+			break;
 		}
 		++cleaner;
 	}
+
 	if(strlen(usr_input) > 3){
-		char test_msg[4];
+		char test_msg[5];
 		memcpy(test_msg,usr_input,4);
-		if(strcmp(usr_input,"msg:")==0){ /* the user want to write a message to his opponent */
+		test_msg[4] = '\0';
+		if(strcmp(test_msg,"msg:")==0){ // the user want to write a message to his opponent
 			client_state = OTHELLO_CLIENT_STATE_EXIT;
 			return 1;
 		}
 	}
-	if(strcmp(usr_input,"exit")==0){ /* on each input, user can enter 'exit' to quit the application */
+	if(strcmp(usr_input,"exit")==0){ // on each input, user can enter 'exit' to quit the application
 		client_state = OTHELLO_CLIENT_STATE_EXIT;
 		return 2;
 	}
+
 	return 0;
 }
 
-void othello_write_mesg(int sock_descr,char* mesg){
-	if ((write(sock_descr, mesg, strlen(mesg))) < 0) {
+void othello_write_mesg(int sock_descr,char* mesg,size_t msg_len){
+	if ((write(sock_descr, mesg, msg_len)) < 0) {
 		perror("Error : Impossible to write message to the server ...\n");
 		exit(1);
     } 
 }
 
 void othello_read_mesg(int sock, char* buff,size_t bytes_to_read){
-	int readed;
-	char answer[bytes_to_read];
-	if((readed = read(sock, answer, sizeof(answer))) != bytes_to_read){
-		printf("Error : Can't read the server answer\n");
-		answer[0] = OTHELLO_ANSWER_READ_ERROR;
+  ssize_t n;
+	if((n = read(sock, buff, bytes_to_read)) != bytes_to_read){
+		printf("Error : Can't read the server answer : n -> %zu / bytes -> %zu\n",n,bytes_to_read);
+		
 	}
-	memset(buff,0,bytes_to_read);
-	memcpy(buff,answer,bytes_to_read);
 }
 
 void othello_shift_array(char* arr,size_t arr_size){
@@ -365,14 +368,14 @@ void othello_shift_array(char* arr,size_t arr_size){
 }
 
 void othello_choose_nickname(int socket_descriptor){
-	char user_input[32];
+	char user_input[33];
 
 	printf("Choose a nickname : ");
 	if(othello_read_user_input(user_input,sizeof user_input)==0){
 		othello_create_user_request(user_input,sizeof user_input,OTHELLO_QUERY_CONNECT);
-		othello_write_mesg(socket_descriptor,user_input);
+		othello_write_mesg(socket_descriptor,user_input,sizeof user_input);
 		client_state = OTHELLO_CLIENT_STATE_WAITING;
-		printf("Waiting for server answer ");
+		printf("Waiting for server answer \n");
 	}
 }
 
@@ -383,12 +386,12 @@ void othello_choose_room(int socket_descriptor){
 	if(othello_read_user_input(user_input,sizeof user_input)==0){
 		if(othello_is_number(user_input)){
 			othello_create_user_request(user_input,sizeof user_input,OTHELLO_QUERY_ROOM_JOIN);
-			othello_write_mesg(socket_descriptor,user_input);
+			othello_write_mesg(socket_descriptor,user_input,sizeof user_input);
 			client_state = OTHELLO_CLIENT_STATE_WAITING;
 			printf("Waiting for server answer ");
 		}else if(strcmp(user_input,"list")==0){
 			othello_create_user_request(user_input,1,OTHELLO_QUERY_ROOM_LIST);
-			othello_write_mesg(socket_descriptor,user_input);
+			othello_write_mesg(socket_descriptor,user_input,sizeof user_input);
 			client_state = OTHELLO_CLIENT_STATE_WAITING;
 			printf("Waiting for server answer ");
 		}else{
@@ -405,7 +408,7 @@ void othello_send_ready(int socket_descriptor){
 			printf("Invalid input!\n");
 		}else{
 			othello_create_user_request(user_input,1,OTHELLO_QUERY_READY);
-			othello_write_mesg(socket_descriptor,user_input);
+			othello_write_mesg(socket_descriptor,user_input,sizeof user_input);
 		}
 	}else if(read_result==1){
 		//othello_send_message
@@ -436,7 +439,7 @@ void othello_send_move(int socket_descriptor){
 			user_input[0] = (char)((int)user_input[0] - 17); // A -> 0, B -> 1, etc ...
 			user_input[1] = (char)((int)user_input[1] - 1); // 1 -> 0, 2 -> 1, 3-> 2, etc...
 			othello_create_user_request(user_input,sizeof user_input,OTHELLO_QUERY_PLAY);
-			othello_write_mesg(socket_descriptor,user_input);
+			othello_write_mesg(socket_descriptor,user_input,sizeof user_input);
 		}
 	}else if(read_result==1){
 		//othello_send_message
@@ -448,13 +451,13 @@ void othello_send_message(int socket_descriptor, char* msg){
 	memcpy(&message[1],&msg[4],strlen(msg)-4);
 	message[strlen(message)] = '\0';
 	othello_create_user_request(message,sizeof message,OTHELLO_QUERY_MESSAGE);
-	othello_write_mesg(socket_descriptor,message);
+	othello_write_mesg(socket_descriptor,message,sizeof message);
 }
 
 void othello_server_connect(int socket_descriptor){
-	char server_answer[3];
-	othello_read_mesg(socket_descriptor,server_answer,sizeof(server_answer));
-	if(server_answer[1] == 1){
+	char server_answer;
+	othello_read_mesg(socket_descriptor,&server_answer,sizeof(server_answer));
+	if(server_answer == OTHELLO_SUCCESS){
 		client_state = OTHELLO_CLIENT_STATE_CONNECTED;
 		printf("You are now connected to the server\n");
 	}else{
@@ -537,8 +540,7 @@ void* othello_write_thread(void* sock){
 			break;
 			case OTHELLO_CLIENT_STATE_WAITING:
 				// messages?
-				printf(".");
-				sleep(1);
+
 			break;
 			default:
 			break;
@@ -551,7 +553,7 @@ void* othello_read_thread(void* sock){
 	int socket_descriptor = *((int*)sock);
 	char server_answer_type;
 	for(;;){
-		othello_read_mesg(socket_descriptor,&server_answer_type,sizeof(server_answer_type));
+		othello_read_mesg(socket_descriptor, &server_answer_type, 1);
 		switch(server_answer_type){
 			case OTHELLO_QUERY_CONNECT:
 				othello_server_connect(socket_descriptor);
