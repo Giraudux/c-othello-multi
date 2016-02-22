@@ -14,37 +14,32 @@
 #define OTHELLO_MESSAGE_LENGTH 256
 
 enum othello_query_e {
-/*deprecated
-    OTHELLO_QUERY_CONNECT,
-    OTHELLO_QUERY_LIST_ROOM,
-    OTHELLO_QUERY_JOIN_ROOM,
-    OTHELLO_QUERY_CREATE_ROOM,
-    OTHELLO_QUERY_LEAVE_ROOM,
-    OTHELLO_QUERY_SEND_MESSAGE,
-    OTHELLO_QUERY_READY,
-    OTHELLO_QUERY_PLAY_TURN
-*/
     OTHELLO_QUERY_CONNECT,
     OTHELLO_QUERY_ROOM_LIST,
     OTHELLO_QUERY_ROOM_JOIN,
     OTHELLO_QUERY_ROOM_LEAVE,
     OTHELLO_QUERY_MESSAGE,
     OTHELLO_QUERY_READY,
-    OTHELLO_QUERY_PLAY
-};
+    OTHELLO_QUERY_PLAY,
 
-enum othello_notif_e {
     OTHELLO_NOTIF_ROOM_JOIN,
     OTHELLO_NOTIF_ROOM_LEAVE,
     OTHELLO_NOTIF_MESSAGE,
     OTHELLO_NOTIF_READY,
-	MARKER_1_DONT_USE,
-	MARKER_2_DONT_USE,
-	MARKER_3_DONT_USE,
     OTHELLO_NOTIF_PLAY,
     OTHELLO_NOTIF_GAME_START,
     OTHELLO_NOTIF_GAME_END
 };
+
+/*enum othello_notif_e {
+    OTHELLO_NOTIF_ROOM_JOIN,
+    OTHELLO_NOTIF_ROOM_LEAVE,
+    OTHELLO_NOTIF_MESSAGE,
+    OTHELLO_NOTIF_READY,
+    OTHELLO_NOTIF_PLAY,
+    OTHELLO_NOTIF_GAME_START,
+    OTHELLO_NOTIF_GAME_END
+};*/
 
 enum othello_state_e {
     OTHELLO_STATE_NOT_CONNECTED,
@@ -64,7 +59,7 @@ enum othello_status_e {
 };
 
 typedef enum othello_query_e othello_query_t;
-typedef enum othello_notif_e othello_notif_t;
+/*typedef enum othello_notif_e othello_notif_t;*/
 typedef enum othello_state_e othello_state_t;
 typedef enum othello_status_e othello_status_t;
 

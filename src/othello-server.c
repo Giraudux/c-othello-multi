@@ -231,7 +231,7 @@ int othello_handle_room_join(othello_player_t * player) {
     char reply[2];
     char notif[1 + OTHELLO_PLAYER_NAME_LENGTH];
     int status;
-    player_t ** players_cursor;
+    othello_player_t ** players_cursor;
     int i;
 
     othello_log(LOG_INFO, "%p room join", player);
