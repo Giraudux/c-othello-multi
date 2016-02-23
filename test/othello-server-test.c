@@ -107,6 +107,8 @@ int main(int argc, char * argv[]) {
         printf(" FAILURE\n");
     }
 
+    getc(stdin);
+
     close(sock);
 
     return EXIT_SUCCESS;
