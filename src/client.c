@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
 }
 
 hostent* othello_ask_server_adress(){
-	char* user_input = "78.226.157.77";
+	char* user_input = "172.16.134.151";
 	
 	//printf("Welcome, please enter the server adresse : ");
 	//if(othello_read_user_input(user_input,sizeof user_input)==0){
