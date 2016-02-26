@@ -1,6 +1,6 @@
 /**
  * \author Alexis Giraudet
- * gcc -ansi -Wall -pedantic -o server -I src src/othello-server.c -lpthread
+ * clang/gcc -ansi -Wall -pedantic -o server src/othello-server.c -lpthread
  */
 
 #include "othello.h"
@@ -209,14 +209,14 @@ int othello_handle_room_list(othello_player_t *player) {
 
   reply_cursor = reply + 1;
   room_id = 0;
-  for (room_cursor = &(rooms[0]);
-       room_cursor != &(rooms[0]) + OTHELLO_NUMBER_OF_ROOMS; room_cursor++) {
+  for (room_cursor = rooms; room_cursor < rooms + OTHELLO_NUMBER_OF_ROOMS;
+       room_cursor++) {
     *reply_cursor = room_id;
     reply_cursor++;
     room_size = 0;
     pthread_mutex_lock(&(room_cursor->mutex));
-    for (players_cursor = &(room_cursor->players[0]);
-         players_cursor != &(room_cursor->players[0]) + OTHELLO_ROOM_LENGTH;
+    for (players_cursor = room_cursor->players;
+         players_cursor < room_cursor->players + OTHELLO_ROOM_LENGTH;
          players_cursor++) {
       if (*players_cursor != NULL) {
         room_size++;
@@ -270,8 +270,8 @@ int othello_handle_room_join(othello_player_t *player) {
     room = &(rooms[room_id]);
 
     pthread_mutex_lock(&(room->mutex));
-    for (players_cursor = &(room->players[0]);
-         players_cursor != &(room->players[0]) + OTHELLO_ROOM_LENGTH;
+    for (players_cursor = room->players;
+         players_cursor < room->players + OTHELLO_ROOM_LENGTH;
          players_cursor++) {
       if (*players_cursor == NULL) {
         *players_cursor = player;
@@ -285,8 +285,8 @@ int othello_handle_room_join(othello_player_t *player) {
     if (player->room != NULL) {
       memcpy(notif + 1, player->name, OTHELLO_PLAYER_NAME_LENGTH);
 
-      for (players_cursor = &(room->players[0]);
-           players_cursor != &(room->players[0]) + OTHELLO_ROOM_LENGTH;
+      for (players_cursor = room->players;
+           players_cursor < room->players + OTHELLO_ROOM_LENGTH;
            players_cursor++) {
         if (*players_cursor != NULL && *players_cursor != player) {
           pthread_mutex_lock(&((*players_cursor)->mutex));
@@ -328,8 +328,8 @@ int othello_handle_room_leave(othello_player_t *player) {
     memcpy(notif + 1, player->name, OTHELLO_PLAYER_NAME_LENGTH);
 
     pthread_mutex_lock(&(player->room->mutex));
-    for (players_cursor = &(player->room->players[0]);
-         players_cursor != &(player->room->players[0]) + OTHELLO_ROOM_LENGTH;
+    for (players_cursor = player->room->players;
+         players_cursor < player->room->players + OTHELLO_ROOM_LENGTH;
          players_cursor++) {
       if (*players_cursor == player) {
         *players_cursor = NULL;
@@ -383,8 +383,8 @@ int othello_handle_message(othello_player_t *player) {
     reply[1] = OTHELLO_SUCCESS;
 
     pthread_mutex_lock(&(player->room->mutex));
-    for (players_cursor = &(player->room->players[0]);
-         players_cursor != &(player->room->players[0]) + OTHELLO_ROOM_LENGTH;
+    for (players_cursor = player->room->players;
+         players_cursor < player->room->players + OTHELLO_ROOM_LENGTH;
          players_cursor++) {
       if (*players_cursor != NULL && *players_cursor != player) {
         pthread_mutex_lock(&((*players_cursor)->mutex));
@@ -444,8 +444,8 @@ int othello_handle_ready(othello_player_t *player) {
     room_ready = player->ready;
 
     pthread_mutex_lock(&(player->room->mutex));
-    for (players_cursor = &(player->room->players[0]);
-         players_cursor != &(player->room->players[0]) + OTHELLO_ROOM_LENGTH;
+    for (players_cursor = player->room->players;
+         players_cursor < player->room->players + OTHELLO_ROOM_LENGTH;
          players_cursor++) {
       room_ready = room_ready && (*players_cursor)->ready;
       pthread_mutex_lock(&((*players_cursor)->mutex));
@@ -457,10 +457,10 @@ int othello_handle_ready(othello_player_t *player) {
     if (room_ready) {
       memset(player->room->grid, 0, sizeof(player->room->grid));
 
-      for (players_cursor = &(player->room->players[0]);
-           players_cursor != &(player->room->players[0]) + OTHELLO_ROOM_LENGTH;
+      for (players_cursor = player->room->players;
+           players_cursor < player->room->players + OTHELLO_ROOM_LENGTH;
            players_cursor++) {
-        if (*players_cursor == player->room->players[0]) {
+        if (players_cursor == player->room->players) {
           notif_start[1] = true; /* first player of the room start to play */
         } else {
           notif_start[1] = false;
@@ -518,13 +518,13 @@ int othello_handle_play(othello_player_t *player) {
     notif_play[2] = reply[1];
 
     pthread_mutex_lock(&(player->room->mutex));
-    for (players_cursor = &(player->room->players[0]);
-         players_cursor != &(player->room->players[0]) + OTHELLO_ROOM_LENGTH;
+    for (players_cursor = player->room->players;
+         players_cursor < player->room->players + OTHELLO_ROOM_LENGTH;
          players_cursor++) {
       if (*players_cursor == player) {
         player_next = players_cursor + 1;
-        if (player_next == &(player->room->players[0]) + OTHELLO_ROOM_LENGTH) {
-          player_next = &(player->room->players[0]);
+        if (player_next >= player->room->players + OTHELLO_ROOM_LENGTH) {
+          player_next = player->room->players;
         }
         (*player_next)->ready = true;
       } else {
@@ -629,8 +629,8 @@ void othello_exit() {
 
 int main(int argc, char *argv[]) {
   othello_player_t *player;
+  othello_room_t *room_cursor;
   unsigned short port;
-  int i;
 
   /* init global */
   /* init socket */
@@ -640,16 +640,15 @@ int main(int argc, char *argv[]) {
   openlog(NULL, LOG_CONS | LOG_PID, LOG_USER);
 #else
   if (pthread_mutex_init(&log_mutex, NULL)) {
-    othello_log(LOG_ERR, "pthread_mutex_init");
     return EXIT_FAILURE;
   }
 #endif
 
   /* init rooms */
   memset(rooms, 0, sizeof(othello_room_t) * OTHELLO_NUMBER_OF_ROOMS);
-  for (i = 0; i < OTHELLO_NUMBER_OF_ROOMS; i++) {
-    if (pthread_mutex_init(&(rooms[i].mutex), NULL)) {
-      othello_log(LOG_ERR, "pthread_mutex_init");
+  for (room_cursor = rooms; room_cursor < rooms + OTHELLO_NUMBER_OF_ROOMS;
+       room_cursor++) {
+    if (pthread_mutex_init(&(room_cursor->mutex), NULL)) {
       return EXIT_FAILURE;
     }
   }
