@@ -12,7 +12,7 @@ int othello_create_socket_stream(unsigned short port);
 ssize_t othello_read_all(int fd, void *buf, size_t count);
 ssize_t othello_write_all(int fd, void *buf, size_t count);
 void othello_log(int priority, const char *format, ...);
-void othello_exit();
+void othello_exit(void);
 
 void *othello_start(void *player);
 void othello_end(othello_player_t *player);

@@ -1,6 +1,7 @@
 /**
  * \author Alexis Giraudet
- * clang/gcc -ansi -Wall -pedantic -o server src/othello-server.c -lpthread
+ * gcc -ansi -Wall -pedantic -o server src/othello-server.c -lpthread
+ * clang -ansi -Weverything -o server src/othello-server.c -lpthread
  */
 
 #include "othello.h"
@@ -157,7 +158,7 @@ int othello_handle_connect(othello_player_t *player) {
   othello_log(LOG_INFO, "%p connect #1", player);
 
   reply[0] = OTHELLO_QUERY_CONNECT;
-  reply[1] = OTHELLO_SUCCESS;
+  reply[1] = OTHELLO_FAILURE;
 
   status = OTHELLO_SUCCESS;
 
@@ -166,11 +167,11 @@ int othello_handle_connect(othello_player_t *player) {
     status = OTHELLO_FAILURE;
   }
 
-  if (player->state == OTHELLO_STATE_NOT_CONNECTED &&
-      player->name[0] != '\0' /*TODO: check protocol version ?*/) {
+  if (status == OTHELLO_SUCCESS &&
+      player->state == OTHELLO_STATE_NOT_CONNECTED &&
+      player->name[0] != '\0' /*TODO: check protocol version*/) {
+    reply[1] = OTHELLO_SUCCESS;
     player->state = OTHELLO_STATE_CONNECTED;
-  } else {
-    reply[1] = OTHELLO_FAILURE;
   }
 
   pthread_mutex_lock(&(player->mutex));
@@ -194,8 +195,8 @@ int othello_handle_room_list(othello_player_t *player) {
              (2 + OTHELLO_ROOM_LENGTH * OTHELLO_PLAYER_NAME_LENGTH) *
                  OTHELLO_NUMBER_OF_ROOMS];
   char *reply_cursor;
-  unsigned char room_id;
-  unsigned char room_size;
+  char room_id;
+  char room_size;
   othello_player_t **players_cursor;
   othello_room_t *room_cursor;
   int status;
@@ -489,6 +490,7 @@ int othello_handle_play(othello_player_t *player) {
   unsigned char stroke[2];
   char reply[2];
   char notif_play[3];
+  char notif_end[2];
   int status;
   othello_player_t **players_cursor;
   othello_player_t **player_next;
@@ -499,6 +501,7 @@ int othello_handle_play(othello_player_t *player) {
   reply[1] = OTHELLO_FAILURE;
 
   notif_play[0] = OTHELLO_NOTIF_PLAY;
+  notif_end[0] = OTHELLO_NOTIF_GAME_END;
 
   status = OTHELLO_SUCCESS;
 
@@ -583,8 +586,9 @@ void *othello_start(void *arg) {
       break;
     }
 
-    if (status)
+    if (status != OTHELLO_SUCCESS) {
       break;
+    }
   }
 
   othello_end(player);
@@ -617,7 +621,7 @@ int othello_create_socket_stream(unsigned short port) {
 }
 
 /*TODO: destroy all rooms/players*/
-void othello_exit() {
+void othello_exit(void) {
   if (sock >= 0)
     close(sock);
 #ifdef OTHELLO_WITH_SYSLOG
