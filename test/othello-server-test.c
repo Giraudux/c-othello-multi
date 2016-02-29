@@ -80,6 +80,8 @@ int main(int argc, char * argv[]) {
         printf(" FAILURE\n");
     }
 
+    getc(stdin);
+
     printf("room join");
     query_room_join[0] = OTHELLO_QUERY_ROOM_JOIN;
     query_room_join[1] = 0;
@@ -93,6 +95,8 @@ int main(int argc, char * argv[]) {
     } else {
         printf(" FAILURE\n");
     }
+
+    getc(stdin);
 
     printf("room leave");
     query_room_leave[0] = OTHELLO_QUERY_ROOM_LEAVE;
