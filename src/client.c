@@ -370,7 +370,7 @@ void othello_shift_array(char* arr,size_t arr_size){
 void othello_choose_nickname(int socket_descriptor){
 	char user_input[33];
 
-	printf("Choose a nickname : ");
+	printf("Choose a nickname : \n");
 	if(othello_read_user_input(user_input,sizeof user_input)==0){
 		othello_create_user_request(user_input,sizeof user_input,OTHELLO_QUERY_CONNECT);
 		othello_write_mesg(socket_descriptor,user_input,sizeof user_input);
@@ -381,19 +381,21 @@ void othello_choose_nickname(int socket_descriptor){
 
 void othello_choose_room(int socket_descriptor){
 	char user_input[6];
-
-	printf("Type a room ID or 'list' to display the list of them : ");
+	char ask_list;
+	char ask_join[2];
+	printf("Type a room ID or 'list' to display the list of them : \n");
 	if(othello_read_user_input(user_input,sizeof user_input)==0){
 		if(othello_is_number(user_input)){
-			othello_create_user_request(user_input,sizeof user_input,OTHELLO_QUERY_ROOM_JOIN);
-			othello_write_mesg(socket_descriptor,user_input,sizeof user_input);
+			ask_join[0] = atoi(user_input);
+			othello_create_user_request(ask_join,sizeof ask_join,OTHELLO_QUERY_ROOM_JOIN);
+			othello_write_mesg(socket_descriptor,ask_join,sizeof ask_join);
 			client_state = OTHELLO_CLIENT_STATE_WAITING;
-			printf("Waiting for server answer ");
+			printf("Waiting for server answer \n");
 		}else if(strcmp(user_input,"list")==0){
-			othello_create_user_request(user_input,1,OTHELLO_QUERY_ROOM_LIST);
-			othello_write_mesg(socket_descriptor,user_input,sizeof user_input);
+			othello_create_user_request(&ask_list, sizeof ask_list, OTHELLO_QUERY_ROOM_LIST);
+			othello_write_mesg(socket_descriptor, &ask_list, sizeof ask_list);
 			client_state = OTHELLO_CLIENT_STATE_WAITING;
-			printf("Waiting for server answer ");
+			printf("Waiting for server answer \n");
 		}else{
 			printf("Invalid input !\n");
 		}
@@ -465,9 +467,9 @@ void othello_server_connect(int socket_descriptor){
 	}
 }
 void othello_server_room_list(int socket_descriptor){
-	char server_answer[200];
+	char server_answer[(2 + OTHELLO_ROOM_LENGTH * OTHELLO_PLAYER_NAME_LENGTH) * OTHELLO_NUMBER_OF_ROOMS];
 	othello_read_mesg(socket_descriptor,server_answer,sizeof(server_answer));
-	printf("List of rooms :");
+	printf("List of rooms :\n");
 }
 void othello_server_room_join(int socket_descriptor){
 	char server_answer[3];
