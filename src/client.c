@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
 }
 
 hostent* othello_ask_server_adress(){
-	char* user_input = "localhost";
+	char* user_input = "172.16.134.149";
 	
 	//printf("Welcome, please enter the server adresse : ");
 	//if(othello_read_user_input(user_input,sizeof user_input)==0){
@@ -107,8 +107,11 @@ void othello_display_board(char color){
 
 bool othello_is_number(char* str){
 	int i;
+	if(strlen(str) == 0){
+		return false;
+	}
 	for(i = 0; i < strlen(str); ++i){
-		if(!(((int)(str[i]) > 47)&&((int)(str[i]) < 58))){
+		if(!(((int)(str[i]) > 47)&&((int)(str[i]) < 58))){;
 			return false;
 		}
 	}
@@ -307,14 +310,16 @@ void othello_create_user_request(char* usr_input, size_t input_size, othello_que
 	usr_input[0] = query;
 }
 
+/*
 int othello_read_user_input(char* usr_input, size_t input_size){
 	char* cleaner;
-
+	printf("ASKING USER INPUT HERE \n");
 	fgets(usr_input,input_size,stdin);
 	//removing '\n' added when user press ENTER to validate the input
 	cleaner = usr_input;
 	while(*cleaner!='\0'){
 		if(*cleaner=='\n'){
+			printf(" BACKSLASH FOUND ! \n");
 			*cleaner='\0';
 			break;
 		}
@@ -334,8 +339,23 @@ int othello_read_user_input(char* usr_input, size_t input_size){
 		client_state = OTHELLO_CLIENT_STATE_EXIT;
 		return 2;
 	}
-
+	
 	return 0;
+}*/
+
+int othello_read_user_input(char* usr_input, size_t input_size){
+	char* inputs = NULL;
+	size_t len = 0;
+	size_t read = 0;
+	if ((read = getline(&inputs, &len, stdin)) == -1){
+		printf("La defaite ... \n");
+	}
+	printf("line = %s\n",inputs);
+	memcpy(usr_input,inputs,(len>input_size)?len:input_size);
+	printf("line = %s\n",usr_input);
+	usr_input[(len>input_size)?len-1:input_size-1] = '\0';
+	if(inputs != NULL)	
+		free(inputs);
 }
 
 void othello_write_mesg(int sock_descr,char* mesg,size_t msg_len){
@@ -369,9 +389,12 @@ void othello_shift_array(char* arr,size_t arr_size){
 
 void othello_choose_nickname(int socket_descriptor){
 	char user_input[33];
-
+	int i;
 	printf("Choose a nickname : \n");
 	if(othello_read_user_input(user_input,sizeof user_input)==0){
+		for(i=0; i < strlen(user_input);++i){
+			printf("char %d : %c\n",i,user_input[i]);
+		}
 		othello_create_user_request(user_input,sizeof user_input,OTHELLO_QUERY_CONNECT);
 		othello_write_mesg(socket_descriptor,user_input,sizeof user_input);
 		client_state = OTHELLO_CLIENT_STATE_WAITING;
@@ -383,6 +406,7 @@ void othello_choose_room(int socket_descriptor){
 	char user_input[5];
 	char room_list;
 	char room_join[2];
+	int i;
 	printf("Type a room ID or 'list' to display the list of them : \n");
 	if(othello_read_user_input(user_input,sizeof user_input)==0){
 		if(othello_is_number(user_input)){
