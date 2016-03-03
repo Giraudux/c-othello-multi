@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
 }
 
 hostent* othello_ask_server_adress(){
-	char* user_input = "172.16.134.149";
+	char* user_input = "172.16.134.148";
 	
 	//printf("Welcome, please enter the server adresse : ");
 	//if(othello_read_user_input(user_input,sizeof user_input)==0){
@@ -347,15 +347,33 @@ int othello_read_user_input(char* usr_input, size_t input_size){
 	char* inputs = NULL;
 	size_t len = 0;
 	size_t read = 0;
+	size_t true_len = 0;
 	if ((read = getline(&inputs, &len, stdin)) == -1){
 		printf("La defaite ... \n");
 	}
-	printf("line = %s\n",inputs);
-	memcpy(usr_input,inputs,(len>input_size)?len:input_size);
-	printf("line = %s\n",usr_input);
-	usr_input[(len>input_size)?len-1:input_size-1] = '\0';
+	true_len = strlen(inputs);
+	memcpy(usr_input,inputs,(true_len<=input_size)?true_len-1:input_size-1);
+	usr_input[(true_len<=input_size)?true_len-1:input_size-1] = '\0';
 	if(inputs != NULL)	
 		free(inputs);
+
+	// The user input is a message to his opponent
+	if(strlen(usr_input) > 3){
+		char test_msg[5];
+		memcpy(test_msg,usr_input,4);
+		test_msg[4] = '\0';
+		if(strcmp(test_msg,"msg:")==0){ // the user want to write a message to his opponent
+			return 1;
+		}
+	}
+
+	// The user input is an exit request
+	if(strcmp(usr_input,"exit")==0){ // on each input, user can enter 'exit' to quit the application
+		client_state = OTHELLO_CLIENT_STATE_EXIT;
+		return 2;
+	}
+
+	return 0;
 }
 
 void othello_write_mesg(int sock_descr,char* mesg,size_t msg_len){
@@ -392,9 +410,6 @@ void othello_choose_nickname(int socket_descriptor){
 	int i;
 	printf("Choose a nickname : \n");
 	if(othello_read_user_input(user_input,sizeof user_input)==0){
-		for(i=0; i < strlen(user_input);++i){
-			printf("char %d : %c\n",i,user_input[i]);
-		}
 		othello_create_user_request(user_input,sizeof user_input,OTHELLO_QUERY_CONNECT);
 		othello_write_mesg(socket_descriptor,user_input,sizeof user_input);
 		client_state = OTHELLO_CLIENT_STATE_WAITING;
@@ -429,6 +444,7 @@ void othello_choose_room(int socket_descriptor){
 
 void othello_send_ready(int socket_descriptor){
 	char user_input[7];
+	printf("Type 'ready' whenever you are :\n");
 	int read_result = othello_read_user_input(user_input,sizeof user_input);
 	if(read_result==0){
 		if(strcmp(user_input,"ready")!=0){
@@ -436,6 +452,7 @@ void othello_send_ready(int socket_descriptor){
 		}else{
 			othello_create_user_request(user_input,1,OTHELLO_QUERY_READY);
 			othello_write_mesg(socket_descriptor,user_input,sizeof user_input);
+			client_state = OTHELLO_CLIENT_STATE_WAITING;
 		}
 	}else if(read_result==1){
 		//othello_send_message
@@ -519,8 +536,8 @@ void othello_server_ready(int socket_descriptor){
 		client_state = OTHELLO_CLIENT_STATE_READY;
 		printf("You are now ready to play\n");
 	}else{
-		OTHELLO_CLIENT_STATE_INROOM;
 		printf("Server can't ready you ...\n");
+		client_state = OTHELLO_CLIENT_STATE_INROOM;
 	}
 }
 void othello_server_play(int socket_descriptor){
