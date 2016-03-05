@@ -13,7 +13,7 @@ client <adresse-serveur> <message-a-transmettre>
 #include "othello.h"
 #include "othello-client.h"
 
-othello_client_state_t client_state;
+othello_client_enum_t client_state;
 char othello_board[OTHELLO_BOARD_LENGTH][OTHELLO_BOARD_LENGTH];
 char my_color;
 char opponent_color;
@@ -310,70 +310,68 @@ void othello_create_user_request(char* usr_input, size_t input_size, othello_que
 	usr_input[0] = query;
 }
 
-/*
-int othello_read_user_input(char* usr_input, size_t input_size){
-	char* cleaner;
-	printf("ASKING USER INPUT HERE \n");
-	fgets(usr_input,input_size,stdin);
-	//removing '\n' added when user press ENTER to validate the input
-	cleaner = usr_input;
-	while(*cleaner!='\0'){
-		if(*cleaner=='\n'){
-			printf(" BACKSLASH FOUND ! \n");
-			*cleaner='\0';
-			break;
+othello_client_enum_t othello_read_user_input(char* usr_input, size_t input_len){
+	char* stdin_value;
+	char* clear_cr;
+	size_t stdin_len;
+	size_t stdin_real_len;
+	size_t bytes_test;	
+
+	stdin_value = NULL;
+
+	if ((bytes_test = getline(&stdin_value, &stdin_len, stdin)) == -1){
+		printf("Input readind failed ... \n");
+	}else{
+		clear_cr = stdin_value;
+		while(*clear_cr != '\n'){ clear_cr += 1; } *clear_cr = '\0'; // remove '\n' from buffer
+		
+		stdin_real_len = strlen(stdin_value);
+		if(stdin_real_len > 4){
+			if(stdin_real_len == 5){
+				if(strncmp(stdin_value, "/list", 5) == 0){
+					input_len = 0;
+					usr_input = NULL;
+					free(stdin_value);
+					return OTHELLO_CLIENT_INPUT_LIST; }
+				if(strncmp(stdin_value, "/exit", 5) == 0){ 
+					free(stdin_value);
+					input_len = 0;
+					usr_input = NULL; 
+					return OTHELLO_CLIENT_INPUT_EXIT; }
+			}	
+			if(stdin_real_len > 5){
+				if(strncmp(stdin_value, "/ready", 6) == 0){
+					input_len = 0;
+					usr_input = NULL;
+					free(stdin_value);
+					return OTHELLO_CLIENT_INPUT_READY; }
+
+				if((char*)realloc(usr_input, (stdin_real_len - 5) * sizeof(char)) == NULL){
+					printf("Error reallocing user_input\n");
+					exit(1);
+				}
+				input_len = sizeof(usr_input);
+				memcpy(stdin_value + 5, usr_input, stdin_real_len - 5);
+				if(strncmp(stdin_value, "/play", 5) == 0){ return OTHELLO_CLIENT_INPUT_PLAY; }
+				if(strncmp(stdin_value, "/mesg", 5) == 0){ return OTHELLO_CLIENT_INPUT_MESG; }
+				if(strncmp(stdin_value, "/join", 5) == 0){ return OTHELLO_CLIENT_INPUT_JOIN; }
+				if(strncmp(stdin_value, "/nick", 5) == 0){ return OTHELLO_CLIENT_INPUT_NICK; }
+			}
+			if(stdin_real_len > 8){
+				if(strncmp(stdin_value, "/notready", 9) == 0){
+					input_len = 0;
+					usr_input = NULL;
+					free(stdin_value);
+					return OTHELLO_CLIENT_INPUT_NOT_READY; }
+			}
+
 		}
-		++cleaner;
 	}
-
-	if(strlen(usr_input) > 3){
-		char test_msg[5];
-		memcpy(test_msg,usr_input,4);
-		test_msg[4] = '\0';
-		if(strcmp(test_msg,"msg:")==0){ // the user want to write a message to his opponent
-			client_state = OTHELLO_CLIENT_STATE_EXIT;
-			return 1;
-		}
-	}
-	if(strcmp(usr_input,"exit")==0){ // on each input, user can enter 'exit' to quit the application
-		client_state = OTHELLO_CLIENT_STATE_EXIT;
-		return 2;
-	}
-	
-	return 0;
-}*/
-
-int othello_read_user_input(char* usr_input, size_t input_size){
-	char* inputs = NULL;
-	size_t len = 0;
-	size_t read = 0;
-	size_t true_len = 0;
-	if ((read = getline(&inputs, &len, stdin)) == -1){
-		printf("La defaite ... \n");
-	}
-	true_len = strlen(inputs);
-	memcpy(usr_input,inputs,(true_len<=input_size)?true_len-1:input_size-1);
-	usr_input[(true_len<=input_size)?true_len-1:input_size-1] = '\0';
-	if(inputs != NULL)	
-		free(inputs);
-
-	// The user input is a message to his opponent
-	if(strlen(usr_input) > 3){
-		char test_msg[5];
-		memcpy(test_msg,usr_input,4);
-		test_msg[4] = '\0';
-		if(strcmp(test_msg,"msg:")==0){ // the user want to write a message to his opponent
-			return 1;
-		}
-	}
-
-	// The user input is an exit request
-	if(strcmp(usr_input,"exit")==0){ // on each input, user can enter 'exit' to quit the application
-		client_state = OTHELLO_CLIENT_STATE_EXIT;
-		return 2;
-	}
-
-	return 0;
+	printf("Unknow command ...\n");
+	input_len = 0;
+	usr_input = NULL;
+	free(stdin_value);
+	return OTHELLO_CLIENT_INPUT_FAIL;
 }
 
 void othello_write_mesg(int sock_descr,char* mesg,size_t msg_len){
@@ -406,7 +404,7 @@ void othello_shift_array(char* arr,size_t arr_size){
 }
 
 void othello_choose_nickname(int socket_descriptor){
-	char user_input[33];
+	/*char user_input[33];
 	int i;
 	printf("Choose a nickname : \n");
 	if(othello_read_user_input(user_input,sizeof user_input)==0){
@@ -414,11 +412,11 @@ void othello_choose_nickname(int socket_descriptor){
 		othello_write_mesg(socket_descriptor,user_input,sizeof user_input);
 		client_state = OTHELLO_CLIENT_STATE_WAITING;
 		printf("Waiting for server answer \n");
-	}
+	}*/
 }
 
 void othello_choose_room(int socket_descriptor){
-	char user_input[5];
+	/*char user_input[5];
 	char room_list;
 	char room_join[2];
 	int i;
@@ -439,11 +437,11 @@ void othello_choose_room(int socket_descriptor){
 		}else{
 			printf("Choose Room : Invalid input !\n");
 		}
-	}
+	}*/
 }
 
 void othello_send_ready(int socket_descriptor){
-	char user_input[7];
+	/*char user_input[7];
 	printf("Type 'ready' whenever you are :\n");
 	int read_result = othello_read_user_input(user_input,sizeof user_input);
 	if(read_result==0){
@@ -456,7 +454,7 @@ void othello_send_ready(int socket_descriptor){
 		}
 	}else if(read_result==1){
 		//othello_send_message
-	}
+	}*/
 }
 
 void othello_display_moves(){
@@ -473,11 +471,11 @@ void othello_display_moves(){
 }
 
 void othello_send_move(int socket_descriptor){
-	char user_input[4];
+	/*char user_input[4];
 	int read_result = othello_read_user_input(user_input,sizeof user_input);
 	printf("Type your move : \n");
 	if(read_result==0){
-		if( ((int)user_input[0] < 65) || ((int)user_input[0] > 72) ||  ((int)user_input[1] < 49) || ((int)user_input[1] > 56) ){ /* A1 to H8 */
+		if( ((int)user_input[0] < 65) || ((int)user_input[0] > 72) ||  ((int)user_input[1] < 49) || ((int)user_input[1] > 56) ){
 			printf("The coordinate are out of board, please try again : \n");
 		}else{
 			user_input[0] = (char)((int)user_input[0] - 17); // A -> 0, B -> 1, etc ...
@@ -487,7 +485,7 @@ void othello_send_move(int socket_descriptor){
 		}
 	}else if(read_result==1){
 		//othello_send_message
-	}
+	}*/
 }
 
 void othello_send_message(int socket_descriptor, char* msg){
@@ -562,34 +560,42 @@ void othello_notif_play(int socket_descriptor, char color){
 
 void* othello_write_thread(void* sock){
 	pthread_t thread_read;	
+	int socket_descriptor = *((int*)sock);
+	char* user_input = NULL;
+	size_t input_len;
+	othello_client_enum_t input_type;
 	if(pthread_create(&thread_read, NULL, othello_read_thread, sock)) {
-		//othello_log(LOG_ERR, "pthread_create");
 		exit(1);
 	}
-	int socket_descriptor = *((int*)sock);
-
+	
 	while(client_state != OTHELLO_CLIENT_STATE_EXIT){
-		switch(client_state){
-			case OTHELLO_CLIENT_STATE_NICKNAME:
-				othello_choose_nickname(socket_descriptor);
+		input_type = othello_read_user_input(user_input,input_len);
+		switch(input_type){
+			case OTHELLO_CLIENT_INPUT_NICK:
+				//othello_choose_nickname(socket_descriptor);
 			break;
-			case OTHELLO_CLIENT_STATE_CONNECTED:
-				othello_choose_room(socket_descriptor);
+			case OTHELLO_CLIENT_INPUT_LIST:
+				//othello_choose_room(socket_descriptor);
 			break;
-			case OTHELLO_CLIENT_STATE_INROOM:
-				othello_send_ready(socket_descriptor);
+			case OTHELLO_CLIENT_INPUT_JOIN:
+				//othello_send_ready(socket_descriptor);
 			break;
-			case OTHELLO_CLIENT_STATE_READY:
+			case OTHELLO_CLIENT_INPUT_READY:
 				// messages?
 			break;
-			case OTHELLO_CLIENT_STATE_PLAYING:
+			case OTHELLO_CLIENT_INPUT_NOT_READY:
 				//display board
 				//display possible moves
-				othello_send_move(socket_descriptor);
+				//othello_send_move(socket_descriptor);
 			break;
-			case OTHELLO_CLIENT_STATE_WAITING:
+			case OTHELLO_CLIENT_INPUT_PLAY:
 				// messages?
-
+			break;
+			case OTHELLO_CLIENT_INPUT_MESG:
+				// messages?
+			break;
+			case OTHELLO_CLIENT_INPUT_EXIT:
+				// messages?
 			break;
 			default:
 			break;
