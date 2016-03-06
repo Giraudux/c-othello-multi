@@ -42,7 +42,9 @@ struct othello_room_s {
 };
 
 static othello_room_t othello_server_rooms[OTHELLO_NUMBER_OF_ROOMS];
+static othello_room_t othello_server_players[OTHELLO_NUMBER_OF_PLAYERS];
 static int othello_server_socket;
+static bool othello_server_daemon;
 #ifndef OTHELLO_WITH_SYSLOG
 static pthread_mutex_t othello_server_log_mutex;
 #endif
@@ -126,7 +128,7 @@ void othello_log(int priority, const char *format, ...) {
 /**
  *
  */
-void othello_end(othello_player_t *player) {
+void othello_player_end(othello_player_t *player) {
   int i;
 
   othello_log(LOG_INFO, "%p end", player);
@@ -634,7 +636,7 @@ int othello_handle_play(othello_player_t *player) {
 /**
  *
  */
-void *othello_start(void *arg) {
+void *othello_player_start(void *arg) {
   othello_player_t *player;
   char query;
   int status;
@@ -679,7 +681,7 @@ void *othello_start(void *arg) {
     }
   }
 
-  othello_end(player);
+  othello_player_end(player);
 
   return NULL;
 }
@@ -758,7 +760,7 @@ int othello_player_remaining_strokes(othello_player_t *player) { return 0; }
 /**
  *
  */
-int othello_valid_stroke(othello_room_t *room, othello_player_t *player,
+int othello_valid_stroke(othello_player_t *player,
                          unsigned char x, unsigned char y) {
   int status;
 
@@ -804,7 +806,34 @@ othello_player_t *othello_is_game_over(othello_room_t *room) {
 /**
  *
  */
+void othello_daemonize(void) {
+  int fd;
+
+  chdir("/");
+  if(fork() != 0) {
+    exit(EXIT_SUCCESS);
+  }
+  setsid();
+  if(fork() != 0) {
+    exit(EXIT_SUCCESS);
+  }
+  for(fd = 0; fd < FOPEN_MAX; fd++) {
+    close(fd);
+  }
+}
+
+/**
+ *
+ */
+void othello_print_help(void) {
+  printf("usage:\n");
+}
+
+/**
+ *
+ */
 int main(int argc, char *argv[]) {
+  char * options = "hp:d";
   othello_player_t *player;
   othello_room_t *room_cursor;
   unsigned short port;
@@ -813,6 +842,29 @@ int main(int argc, char *argv[]) {
   /* init socket */
   port = 5000;
   othello_server_socket = -1;
+  othello_server_daemon = false;
+
+  memset(othello_server_rooms, 0, sizeof(othello_server_rooms));
+  memset(othello_server_players, 0, sizeof(othello_server_players));
+
+  /*opterr = 0;
+  while((option = getopt(argc, argv, options)) != -1) {
+    switch(option) {
+      case 'h':
+        othello_print_help();
+        return EXIT_SUCCESS;
+      case 'p': break;
+      case 'd': break;
+      case '?':
+        othello_print_help();
+        return EXIT_FAILURE;
+    }
+  }*/
+
+  if(othello_server_daemon) {
+    othello_daemonize();
+  }
+
 #ifdef OTHELLO_WITH_SYSLOG
   openlog(NULL, LOG_CONS | LOG_PID, LOG_USER);
 #else
@@ -821,9 +873,6 @@ int main(int argc, char *argv[]) {
   }
 #endif
 
-  /* init rooms */
-  memset(othello_server_rooms, 0,
-         sizeof(othello_room_t) * OTHELLO_NUMBER_OF_ROOMS);
   for (room_cursor = othello_server_rooms;
        room_cursor < othello_server_rooms + OTHELLO_NUMBER_OF_ROOMS;
        room_cursor++) {
@@ -870,7 +919,7 @@ int main(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
 
-    if (pthread_create(&(player->thread), NULL, othello_start, player)) {
+    if (pthread_create(&(player->thread), NULL, othello_player_start, player)) {
       othello_log(LOG_ERR, "pthread_create");
       return EXIT_FAILURE;
     }
