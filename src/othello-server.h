@@ -23,6 +23,7 @@ int othello_handle_room_join(othello_player_t *player);
 int othello_handle_room_leave(othello_player_t *player);
 int othello_handle_message(othello_player_t *player);
 int othello_handle_ready(othello_player_t *player);
+int othello_handle_not_ready(othello_player_t *player);
 int othello_handle_play(othello_player_t *player);
 
 int othello_player_score(othello_player_t *player);
