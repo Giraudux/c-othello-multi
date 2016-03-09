@@ -22,21 +22,19 @@ void othello_print_help(void);
 void *othello_player_start(void *player);
 void othello_player_end(othello_player_t *player);
 
-int othello_handle_connect(othello_player_t *player);
-int othello_handle_room_list(othello_player_t *player);
-int othello_handle_room_join(othello_player_t *player);
-int othello_handle_room_leave(othello_player_t *player);
-int othello_handle_message(othello_player_t *player);
-int othello_handle_ready(othello_player_t *player);
-int othello_handle_not_ready(othello_player_t *player);
-int othello_handle_play(othello_player_t *player);
+othello_status_t othello_handle_connect(othello_player_t *player);
+othello_status_t othello_handle_room_list(othello_player_t *player);
+othello_status_t othello_handle_room_join(othello_player_t *player);
+othello_status_t othello_handle_room_leave(othello_player_t *player);
+othello_status_t othello_handle_message(othello_player_t *player);
+othello_status_t othello_handle_ready(othello_player_t *player);
+othello_status_t othello_handle_not_ready(othello_player_t *player);
+othello_status_t othello_handle_play(othello_player_t *player);
 
 int othello_player_score(othello_player_t *player);
-int othello_player_can_play(othello_player_t *player);
-int othello_player_valid_stroke(othello_player_t *player, unsigned char x,
-                                unsigned char y);
-othello_player_t *othello_is_game_over(othello_room_t *room);
-
+othello_status_t othello_player_can_play(othello_player_t *player);
+othello_status_t othello_player_valid_stroke(othello_player_t *player,
+                                             unsigned char x, unsigned char y);
 int main(int argc, char *argv[]);
 
 #endif
