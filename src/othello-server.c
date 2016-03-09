@@ -1,7 +1,5 @@
 /**
  * \author Alexis Giraudet
- * gcc -ansi -Wall -pedantic -o server src/othello-server.c -lpthread
- * clang -ansi -Weverything -o server src/othello-server.c -lpthread
  */
 
 #include "othello.h"
@@ -45,6 +43,8 @@ static othello_room_t othello_server_rooms[OTHELLO_NUMBER_OF_ROOMS];
 static othello_room_t othello_server_players[OTHELLO_NUMBER_OF_PLAYERS];
 static int othello_server_socket;
 static bool othello_server_daemon;
+/*static int othello_server_players_remaining;
+static pthread_mutex_t othello_server_full_mutex;*/
 #ifndef OTHELLO_WITH_SYSLOG
 static pthread_mutex_t othello_server_log_mutex;
 #endif
@@ -579,6 +579,7 @@ int othello_handle_play(othello_player_t *player) {
   int status;
   othello_player_t **player_cursor;
   othello_player_t **player_next;
+  othello_player_t *player_winner;
 
   othello_log(LOG_INFO, "%p play", player);
 
@@ -595,41 +596,47 @@ int othello_handle_play(othello_player_t *player) {
   }
 
   /*TODO: check/valid stroke and check if game is over + notify*/
-  if (status == OTHELLO_SUCCESS && player->state == OTHELLO_STATE_IN_GAME &&
-      player->ready
-      /*check if stroke is valid*/
-      /*player->room != null*/) {
-    reply[1] = OTHELLO_SUCCESS;
-    player->ready = false;
+  if (status == OTHELLO_SUCCESS && player->state == OTHELLO_STATE_IN_GAME) {
 
-    notif_play[1] = reply[0];
-    notif_play[2] = reply[1];
+    pthread_mutex_lock(&(player->room->mutex));
+    if (player->ready &&
+        othello_player_valid_stroke(player, stroke[0], stroke[1]) ==
+            OTHELLO_SUCCESS) {
+      reply[1] = OTHELLO_SUCCESS;
+      player->ready = false;
+    }
+    pthread_mutex_unlock(&(player->room->mutex));
+
+    pthread_mutex_lock(&(player->mutex));
+    if (othello_write_all(player->socket, reply, sizeof(reply)) <= 0) {
+      status = OTHELLO_FAILURE;
+    }
+    pthread_mutex_unlock(&(player->mutex));
+
+    memcpy(notif_play + 1, stroke, sizeof(stroke));
+    /*notif_play[1] = stroke[0];
+    notif_play[2] = stroke[1];*/
 
     pthread_mutex_lock(&(player->room->mutex));
     for (player_cursor = player->room->players;
          player_cursor < player->room->players + OTHELLO_ROOM_LENGTH;
          player_cursor++) {
-      if (*player_cursor == player) {
-        player_next = player_cursor + 1;
-        if (player_next >= player->room->players + OTHELLO_ROOM_LENGTH) {
-          player_next = player->room->players;
-        }
-        (*player_next)->ready = true;
-      } else {
+      if (*player_cursor != player && *player_cursor != NULL) {
         pthread_mutex_lock(&((*player_cursor)->mutex));
         othello_write_all((*player_cursor)->socket, notif_play,
                           sizeof(notif_play));
         pthread_mutex_unlock(&((*player_cursor)->mutex));
       }
     }
-    pthread_mutex_unlock(&(player->room->mutex));
-  }
 
-  pthread_mutex_lock(&(player->mutex));
-  if (othello_write_all(player->socket, reply, sizeof(reply)) <= 0) {
-    status = OTHELLO_FAILURE;
+    pthread_mutex_unlock(&(player->room->mutex));
+  } else {
+    pthread_mutex_lock(&(player->mutex));
+    if (othello_write_all(player->socket, reply, sizeof(reply)) <= 0) {
+      status = OTHELLO_FAILURE;
+    }
+    pthread_mutex_unlock(&(player->mutex));
   }
-  pthread_mutex_unlock(&(player->mutex));
 
   return status;
 }
@@ -756,13 +763,13 @@ int othello_player_score(othello_player_t *player) {
 /**
  *
  */
-int othello_player_remaining_strokes(othello_player_t *player) { return 0; }
+int othello_player_can_play(othello_player_t *player) { return 0; }
 
 /**
  *
  */
-int othello_valid_stroke(othello_player_t *player, unsigned char x,
-                         unsigned char y) {
+int othello_player_valid_stroke(othello_player_t *player, unsigned char x,
+                                unsigned char y) {
   int status;
 
   status = OTHELLO_FAILURE;
@@ -790,7 +797,7 @@ othello_player_t *othello_is_game_over(othello_room_t *room) {
   for (player_cursor = room->players;
        player_cursor < room->players + OTHELLO_ROOM_LENGTH; player_cursor++) {
     score = othello_player_score(*player_cursor);
-    remaining_strokes += othello_player_remaining_strokes(*player_cursor);
+    remaining_strokes += othello_player_can_play(*player_cursor);
     if (score > best_score) {
       best_score = score;
       winner = *player_cursor;
