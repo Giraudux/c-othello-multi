@@ -578,7 +578,7 @@ othello_status_t othello_handle_not_ready(othello_player_t *player) {
  */
 othello_status_t othello_handle_play(othello_player_t *player) {
   unsigned char stroke[2];
-  char reply[2];
+  char reply[2 + 2];/*TODO: fix me*/
   char notif_play[3];
   char notif_end[2];
   char notif_your_turn[1];
@@ -589,9 +589,9 @@ othello_status_t othello_handle_play(othello_player_t *player) {
   othello_player_t *player_turn;
   int best_score, score;
 
-  othello_log(LOG_INFO, "%p play", player);
+  othello_log(LOG_INFO, "%p play #1", player);
 
-  reply[0] = OTHELLO_QUERY_READY;
+  reply[0] = OTHELLO_QUERY_PLAY;
   reply[1] = OTHELLO_FAILURE;
 
   notif_play[0] = OTHELLO_NOTIF_PLAY;
@@ -605,9 +605,13 @@ othello_status_t othello_handle_play(othello_player_t *player) {
     status = OTHELLO_FAILURE;
   }
 
+  memcpy(reply + 2, stroke, sizeof(stroke)); /*TODO: fixme*/
+
   /*TODO: check/valid stroke and check if game is over + notify*/
   if (status == OTHELLO_SUCCESS && player->state == OTHELLO_STATE_IN_GAME &&
       player->ready) {
+
+    othello_log(LOG_INFO, "%p play [%d, %d]", player, stroke[0], stroke[1]);
 
     pthread_mutex_lock(&(player->room->mutex));
     if (othello_player_valid_stroke(player, stroke[0], stroke[1]) ==
@@ -649,8 +653,9 @@ othello_status_t othello_handle_play(othello_player_t *player) {
     /*find next player or winner if game is over*/
     player_winner = player;
     player_turn = NULL;
-    for (player_cursor = player_next; player_cursor != player_next;
+    /*for (player_cursor = player_next; player_cursor != player_next;
          player_cursor++) {
+      othello_log(LOG_INFO, "%p play -- %p", player, *player_cursor);
       if (player_cursor == player->room->players + OTHELLO_ROOM_LENGTH) {
         player_cursor = player->room->players;
       }
@@ -662,9 +667,30 @@ othello_status_t othello_handle_play(othello_player_t *player) {
         player_winner = *player_cursor;
         best_score = score;
       }
-    }
+    }*/
+    player_cursor = player_next;
+          do {
+          if (player_cursor >= player->room->players + OTHELLO_ROOM_LENGTH) {
+            player_cursor = player->room->players;
+          }
+          if (othello_player_can_play(*player_cursor)) {
+            player_turn = *player_cursor;
+            break;
+          }
+          if ((score = othello_player_score(*player_cursor)) > best_score) {
+            player_winner = *player_cursor;
+            best_score = score;
+          }
+
+          player_cursor++;
+        } while(player_cursor != player_next);
+
+
+    othello_log(LOG_INFO, "%p play #2 -- %p", player, player_turn);
 
     if (player_turn == NULL) {
+      othello_log(LOG_INFO, "%p play #3", player);
+
       for (player_cursor = player->room->players;
            player_cursor < player->room->players + OTHELLO_ROOM_LENGTH;
            player_cursor++) {
@@ -700,6 +726,8 @@ othello_status_t othello_handle_play(othello_player_t *player) {
     }
     pthread_mutex_unlock(&(player->mutex));
   }
+
+  othello_log(LOG_INFO, "%p play #4", player);
 
   return status;
 }
@@ -827,7 +855,19 @@ int othello_player_score(othello_player_t *player) {
 /**
  *
  */
-othello_status_t othello_player_can_play(othello_player_t *player) { return 0; }
+bool othello_player_can_play(othello_player_t *player) {
+  int i, j;
+
+  for(i = 0; i < OTHELLO_BOARD_LENGTH; i++) {
+    for(j = 0; j < OTHELLO_BOARD_LENGTH; j++) {
+      if(othello_player_is_valid_stroke(player, i, j)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
 
 /**
  *
@@ -838,12 +878,27 @@ othello_status_t othello_player_valid_stroke(othello_player_t *player,
 
   status = OTHELLO_FAILURE;
 
-  if (player->room->grid[x][y] == NULL) {
+  if (othello_player_is_valid_stroke(player, x, y)) {
     status = OTHELLO_SUCCESS;
     player->room->grid[x][y] = player;
+    /*update grid with returned*/
   }
 
   return status;
+}
+
+/**
+ *
+ */
+bool othello_player_is_valid_stroke(othello_player_t * player, unsigned char x, unsigned char y) {
+  bool valid;
+
+  valid = false;
+  if(x < OTHELLO_BOARD_LENGTH && y < OTHELLO_BOARD_LENGTH && player->room->grid[x][y] == NULL) {
+    valid = true;
+  }
+
+  return valid;
 }
 
 /**

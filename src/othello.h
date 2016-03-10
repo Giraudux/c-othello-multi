@@ -5,8 +5,6 @@
 #ifndef OTHELLO_H
 #define OTHELLO_H
 
-#include <sys/types.h>
-
 #define OTHELLO_VERSION 1
 
 #define OTHELLO_BOARD_LENGTH 8
