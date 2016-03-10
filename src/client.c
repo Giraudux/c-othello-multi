@@ -13,6 +13,8 @@ client <adresse-serveur> <message-a-transmettre>
 #include "othello.h"
 #include "othello-client.h"
 
+#define OTHELLO_DEFAULT_SERVER_ADRESS "172.16.134.142"
+
 othello_client_enum_t client_state;
 char othello_board[OTHELLO_BOARD_LENGTH][OTHELLO_BOARD_LENGTH];
 char my_color;
@@ -75,7 +77,7 @@ hostent* othello_ask_server_adress(){
 	}
 
 	if(test_con == OTHELLO_CLIENT_INPUT_CONNECT_DEFAULT){
-		return gethostbyname("localhost");
+		return gethostbyname(OTHELLO_DEFAULT_SERVER_ADRESS);
 	}
 	
 	printf("Bad input, please try again ...\n");
@@ -100,11 +102,11 @@ void othello_display_board(){
 
 	printf("   ");
 	for (i = 0; i < OTHELLO_BOARD_LENGTH; ++i){
-		printf("%c",i+1);
+		printf("%d",i+1);
 	}
-	printf("\n  _\n |");
+	printf("\n   ");
 	for (i = 0; i < OTHELLO_BOARD_LENGTH; ++i){
-		printf("_");
+		printf("-");
 	}
 	for (i = 0; i < OTHELLO_BOARD_LENGTH; ++i){
 		printf("\n%c| ",(char)(i+65));
@@ -112,6 +114,7 @@ void othello_display_board(){
 			printf("%c",othello_board[i][j]);
 		}
 	}
+	printf("\n");
 }
 
 bool othello_is_number(char* str){
@@ -133,7 +136,7 @@ void othello_display_moves(){
 	for (i = 0; i < OTHELLO_BOARD_LENGTH; ++i){
 		for(j = 0; j < OTHELLO_BOARD_LENGTH; ++j){
 			if(othello_move_valid(i,j,my_color)){
-				printf("(%c;%d)\n",(char)(i + 65),j+1);
+				printf("(%c;%d) ",(char)(i + 65),j+1);
 			}
 		}
 	}
@@ -485,7 +488,6 @@ void othello_choose_room(int socket_descriptor, char* usr_inpt, size_t inpt_len)
 		}else{
 			printf("No room ID entered!\n");
 		}
-		othello_write_mesg(socket_descriptor, user_input, sizeof user_input);
 	}else{
 		printf("You can't join a server room now!\n");
 	}
@@ -685,7 +687,7 @@ void othello_notif_your_turn(int socket_descriptor){
 void othello_notif_start(int socket_descriptor){
 	char server_answer;
 	othello_read_mesg(socket_descriptor,&server_answer,sizeof(server_answer));
-	if(server_answer == '1'){
+	if(server_answer){
 		my_color = othello_board[OTHELLO_BOARD_LENGTH/2-1][OTHELLO_BOARD_LENGTH/2];
 		client_state = OTHELLO_CLIENT_STATE_PLAYING;
 		printf("Your play with '%c' tokens!\n",my_color);
@@ -724,7 +726,9 @@ void* othello_write_thread(void* sock){
 	printf("You can now enter your nickname :\n");	
 
 	while(client_state != OTHELLO_CLIENT_STATE_EXIT){
+
 		input_type = othello_read_user_input(&usr_input, &input_len);
+
 		switch(input_type){
 			case OTHELLO_CLIENT_INPUT_NICK:
 				othello_choose_nickname(socket_descriptor, usr_input, input_len);
