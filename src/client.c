@@ -751,6 +751,8 @@ void othello_notif_start(int socket_descriptor){
 		printf("Your play with '%c' tokens!\n",my_color);
 		printf("You start, enter your move:\n");
 		othello_display_moves();
+		if(auto_mode)
+			othello_send_auto_move(socket_descriptor);
 	}else{
 		my_color = othello_board[OTHELLO_BOARD_LENGTH/2-1][OTHELLO_BOARD_LENGTH/2-1];
 		opponent_color = othello_board[OTHELLO_BOARD_LENGTH/2-1][OTHELLO_BOARD_LENGTH/2];
