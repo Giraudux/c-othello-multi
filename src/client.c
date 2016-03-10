@@ -146,6 +146,7 @@ void othello_display_moves(){
 }
 
 void othello_calc_best_move(int* x_pos, int* y_pos){
+	int i,j;
 	int returned = 0;
 	int max_returned = 0;
 	for (i = 0; i < OTHELLO_BOARD_LENGTH; ++i){
@@ -270,7 +271,6 @@ void othello_return_tokens(int x, int y, char color){
 
 int othello_move_valid(int x, int y, char color){
 	int x_iter,y_iter,nb_returned,final_returned;
-	bool 
 
 	if (othello_board[x][y] != '*')
 		return 0;
