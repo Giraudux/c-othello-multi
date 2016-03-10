@@ -13,7 +13,7 @@ client <adresse-serveur> <message-a-transmettre>
 #include "othello.h"
 #include "othello-client.h"
 
-#define OTHELLO_DEFAULT_SERVER_ADRESS "172.16.134.142"
+#define OTHELLO_DEFAULT_SERVER_ADRESS "78.226.157.77"
 
 othello_client_enum_t client_state;
 char othello_board[OTHELLO_BOARD_LENGTH][OTHELLO_BOARD_LENGTH];
@@ -100,7 +100,7 @@ void othello_init_board(){
 void othello_display_board(){
 	int i,j;
 
-	printf("   ");
+	printf("\n   ");
 	for (i = 0; i < OTHELLO_BOARD_LENGTH; ++i){
 		printf("%d",i+1);
 	}
@@ -114,7 +114,7 @@ void othello_display_board(){
 			printf("%c",othello_board[i][j]);
 		}
 	}
-	printf("\n");
+	printf("\n\n");
 }
 
 bool othello_is_number(char* str){
@@ -537,12 +537,12 @@ void othello_send_not_ready(int socket_descriptor){
 void othello_send_move(int socket_descriptor, char* usr_inpt, size_t inpt_len){
 	char user_input[3];
 	if (client_state == OTHELLO_CLIENT_STATE_PLAYING){
-		if(inpt_len != 3){
+		if(inpt_len == 3){
 			if( ((int)usr_inpt[1] < 65) || ((int)usr_inpt[1] > 72) ||  ((int)usr_inpt[2] < 49) || ((int)usr_inpt[2] > 56) ){
 				printf("The move coordinates are out of board, please try again : \n");
 			}else{
-				user_input[1] = (char)((int)usr_inpt[1] - 17); // A -> 0, B -> 1, C -> 2 etc ...
-				user_input[2] = (char)((int)usr_inpt[2] - 1);  // 1 -> 0, 2 -> 1, 3 -> 2 etc ...
+				user_input[1] = (int)usr_inpt[1] - 65; // A -> 0, B -> 1, C -> 2 etc ...
+				user_input[2] = (int)usr_inpt[2] - 49;  // 1 -> 0, 2 -> 1, 3 -> 2 etc ...
 				user_input[0] = OTHELLO_QUERY_PLAY;
 				othello_write_mesg(socket_descriptor,user_input,sizeof user_input);
 				client_state == OTHELLO_CLIENT_STATE_WAITING;
@@ -643,12 +643,14 @@ void othello_server_not_ready(int socket_descriptor){
 
 void othello_server_play(int socket_descriptor){
 	char server_answer;
+	char empty_buff[2];
 	othello_read_mesg(socket_descriptor,&server_answer,sizeof(server_answer));
 	if(server_answer == OTHELLO_SUCCESS){
 		client_state = OTHELLO_CLIENT_STATE_WAITING;
 		printf("Votre coup a ete valide\n");
 		othello_place_token(socket_descriptor,my_color);
 	}else{
+		othello_read_mesg(socket_descriptor, empty_buff, sizeof(empty_buff));
 		client_state = OTHELLO_CLIENT_STATE_PLAYING;
 		printf("Votre coup est invalide ...\nEnter a new one!\n");
 	}
@@ -694,9 +696,9 @@ void othello_notif_play(int socket_descriptor, char color){
 void othello_place_token(int socket_descriptor, char color){
 	char server_answer[2];
 	othello_read_mesg(socket_descriptor,server_answer,sizeof(server_answer));
-	printf("New token added to the board in : %d%d\n", (int)(server_answer[0]-48), (int)(server_answer[1]-48));
-	othello_board[server_answer[0]][server_answer[1]] = color;
-	othello_return_tokens((int)(server_answer[0]-48), (int)(server_answer[1]-48), color);
+	printf("New token added to the board in : (%d : %d)\n", server_answer[0], server_answer[1]);
+	othello_board[(unsigned char)server_answer[0]][(unsigned char)server_answer[1]] = color;
+	othello_return_tokens((unsigned char)(server_answer[0]), (unsigned char)(server_answer[1]), color);
 }
 
 void othello_notif_your_turn(int socket_descriptor){
@@ -710,12 +712,14 @@ void othello_notif_start(int socket_descriptor){
 	othello_read_mesg(socket_descriptor,&server_answer,sizeof(server_answer));
 	if(server_answer){
 		my_color = othello_board[OTHELLO_BOARD_LENGTH/2-1][OTHELLO_BOARD_LENGTH/2];
+		opponent_color = othello_board[OTHELLO_BOARD_LENGTH/2-1][OTHELLO_BOARD_LENGTH/2-1];
 		client_state = OTHELLO_CLIENT_STATE_PLAYING;
 		printf("Your play with '%c' tokens!\n",my_color);
 		printf("You start, enter your move:\n");
 		othello_display_moves();
 	}else{
-		my_color = othello_board[OTHELLO_BOARD_LENGTH/2][OTHELLO_BOARD_LENGTH/2];
+		my_color = othello_board[OTHELLO_BOARD_LENGTH/2-1][OTHELLO_BOARD_LENGTH/2-1];
+		opponent_color = othello_board[OTHELLO_BOARD_LENGTH/2-1][OTHELLO_BOARD_LENGTH/2];
 		client_state = OTHELLO_CLIENT_STATE_WAITING;
 		printf("Your play with '%c' tokens!\n",my_color);
 		printf("Opponent play first, please wait ...\n");
@@ -725,7 +729,7 @@ void othello_notif_start(int socket_descriptor){
 void othello_notif_end(int socket_descriptor){
 	char server_answer;
 	othello_read_mesg(socket_descriptor,&server_answer,sizeof(server_answer));
-	if(server_answer == '1'){
+	if(server_answer){
 		printf("Game ended, you won!\n");
 	}else{
 		printf("Game ended, you lost!\n");
