@@ -146,7 +146,7 @@ void othello_display_moves(){
 void othello_return_tokens(int x, int y, char color){
 	int x_iter,y_iter;
 
-	x_iter = x-1;
+	x_iter = x;
 	y_iter = y;
 	while((x_iter-1 >= 0) && othello_board[x_iter-1][y_iter] != color && othello_board[x_iter-1][y_iter] != '*'){
 		--x_iter;
@@ -159,7 +159,7 @@ void othello_return_tokens(int x, int y, char color){
 	}
 
 	x_iter = x;
-	y_iter = y+1;
+	y_iter = y;
 	while((y_iter+1 <= 7) && othello_board[x_iter][y_iter+1] != color && othello_board[x_iter][y_iter+1] != '*'){
 		++y_iter;
 	}
@@ -170,7 +170,7 @@ void othello_return_tokens(int x, int y, char color){
 		}
 	}
 	
-	x_iter = x+1;
+	x_iter = x;
 	y_iter = y;
 	while((x_iter+1 <= 7) && othello_board[x_iter+1][y_iter] != color && othello_board[x_iter+1][y_iter] != '*'){
 		++x_iter;
@@ -183,7 +183,7 @@ void othello_return_tokens(int x, int y, char color){
 	}
 
 	x_iter = x;
-	y_iter = y-1;
+	y_iter = y;
 	while((y_iter-1 >= 0) && othello_board[x_iter][y_iter-1] != color && othello_board[x_iter][y_iter-1] != '*'){		
 		--y_iter;
 	}
@@ -194,8 +194,8 @@ void othello_return_tokens(int x, int y, char color){
 		}
 	}
 	
-	x_iter = x-1;
-	y_iter = y+1;
+	x_iter = x;
+	y_iter = y;
 	while((x_iter-1 >= 0) && (y_iter+1 <= 7) && othello_board[x_iter-1][y_iter+1] != color && othello_board[x_iter-1][y_iter+1] != '*'){
 		--x_iter;
 		++y_iter;
@@ -208,8 +208,8 @@ void othello_return_tokens(int x, int y, char color){
 		}
 	}
 
-	x_iter = x+1;
-	y_iter = y+1;
+	x_iter = x;
+	y_iter = y;
 	while((x_iter+1 <= 7) && (y_iter+1 <= 7) && othello_board[x_iter+1][y_iter+1] != color && othello_board[x_iter+1][y_iter+1] != '*'){
 		++x_iter;
 		++y_iter;
@@ -222,8 +222,8 @@ void othello_return_tokens(int x, int y, char color){
 		}
 	}
 
-	x_iter = x+1;
-	y_iter = y-1;
+	x_iter = x;
+	y_iter = y;
 	while((x_iter+1 <= 7) && (y_iter-1 >= 0) && othello_board[x_iter+1][y_iter-1] != color && othello_board[x_iter+1][y_iter-1] != '*'){
 		++x_iter;
 		--y_iter;
@@ -235,8 +235,8 @@ void othello_return_tokens(int x, int y, char color){
 			++y_iter;
 		}
 	}
-	x_iter = x-1;
-	y_iter = y-1;
+	x_iter = x;
+	y_iter = y;
 	while((x_iter-1 >= 0) && (y_iter-1 >= 0) && othello_board[x_iter-1][y_iter-1] != color && othello_board[x_iter-1][y_iter-1] != '*'){
 		--x_iter;
 		--y_iter;
@@ -251,81 +251,101 @@ void othello_return_tokens(int x, int y, char color){
 }
 
 bool othello_move_valid(int x, int y, char color){
-	int x_iter,y_iter;
+	int x_iter,y_iter,nb_returned;
 
-	x_iter = x-1;
+	if (othello_board[x][y] != '*')
+		return false;
+
+	nb_returned = 0;
+	x_iter = x;
 	y_iter = y;
 	while((x_iter-1 >= 0) && othello_board[x_iter-1][y_iter] != color && othello_board[x_iter-1][y_iter] != '*'){
 		--x_iter;
+		++nb_returned;
 	}
 	if(othello_board[x_iter-1][y_iter] == color){
-		return true;
+		return (nb_returned > 0);
 	}
 
+	nb_returned = 0;
 	x_iter = x;
-	y_iter = y+1;
+	y_iter = y;
 	while((y_iter+1 <= 7) && othello_board[x_iter][y_iter+1] != color && othello_board[x_iter][y_iter+1] != '*'){
 		++y_iter;
+		++nb_returned;
 	}
 	if(othello_board[x_iter][y_iter+1] == color){
-		return true;
+		return (nb_returned > 0);
 	}
 	
-	x_iter = x+1;
+	nb_returned = 0;
+	x_iter = x;
 	y_iter = y;
 	while((x_iter+1 <= 7) && othello_board[x_iter+1][y_iter] != color && othello_board[x_iter+1][y_iter] != '*'){
 		++x_iter;
+		++nb_returned;
 	}
 	if(othello_board[x_iter+1][y_iter] == color){
-		return true;
+		return (nb_returned > 0);
 	}
 
+	nb_returned = 0;
 	x_iter = x;
-	y_iter = y-1;
+	y_iter = y;
 	while((y_iter-1 >= 0) && othello_board[x_iter][y_iter-1] != color && othello_board[x_iter][y_iter-1] != '*'){		
 		--y_iter;
+		++nb_returned;
 	}
 	if(othello_board[x_iter][y_iter-1] == color){
-		return true;
+		return (nb_returned > 0);
 	}
 	
-	x_iter = x-1;
-	y_iter = y+1;
+	nb_returned = 0;
+	x_iter = x;
+	y_iter = y;
 	while((x_iter-1 >= 0) && (y_iter+1 <= 7) && othello_board[x_iter-1][y_iter+1] != color && othello_board[x_iter-1][y_iter+1] != '*'){
 		--x_iter;
 		++y_iter;
+		++nb_returned;
 	}
 	if(othello_board[x_iter-1][y_iter+1] == color){
-		return true;
+		return (nb_returned > 0);
 	}
 
-	x_iter = x+1;
-	y_iter = y+1;
+	nb_returned = 0;
+	x_iter = x;
+	y_iter = y;
 	while((x_iter+1 <= 7) && (y_iter+1 <= 7) && othello_board[x_iter+1][y_iter+1] != color && othello_board[x_iter+1][y_iter+1] != '*'){
 		++x_iter;
 		++y_iter;
+		++nb_returned;
 	}
 	if(othello_board[x_iter+1][y_iter+1] == color){
-		return true;
+		return (nb_returned > 0);
 	}
 
-	x_iter = x+1;
-	y_iter = y-1;
+	nb_returned = 0;
+	x_iter = x;
+	y_iter = y;
 	while((x_iter+1 <= 7) && (y_iter-1 >= 0) && othello_board[x_iter+1][y_iter-1] != color && othello_board[x_iter+1][y_iter-1] != '*'){
 		++x_iter;
 		--y_iter;
+		++nb_returned;
 	}
 	if(othello_board[x_iter+1][y_iter-1] == color){
-		return true;
+		return (nb_returned > 0);
 	}
-	x_iter = x-1;
-	y_iter = y-1;
+	
+	nb_returned = 0;
+	x_iter = x;
+	y_iter = y;
 	while((x_iter-1 >= 0) && (y_iter-1 >= 0) && othello_board[x_iter-1][y_iter-1] != color && othello_board[x_iter-1][y_iter-1] != '*'){
 		--x_iter;
 		--y_iter;
+		++nb_returned;
 	}
 	if(othello_board[x_iter-1][y_iter-1] == color){
-		return true;
+		return (nb_returned > 0);
 	}
 	return false;
 }
@@ -359,28 +379,8 @@ othello_client_enum_t othello_read_user_input(char** usr_input, size_t* input_le
 					free(stdin_value);
 					input_len = 0;
 					return OTHELLO_CLIENT_INPUT_EXIT; }
-			}	
-			if(stdin_real_len > 5){
-				if(strncmp(stdin_value, "/ready", 6) == 0){
-					input_len = 0;
-					free(stdin_value);
-					return OTHELLO_CLIENT_INPUT_READY; }
-
-				*input_len = stdin_real_len - 5;
-
-				if((realloc_input = (char*)realloc(*usr_input, (*input_len) * sizeof(char))) == NULL){
-					printf("Error reallocating user_input\n");
-					exit(1);
-				}
-				*usr_input = realloc_input;
-				memcpy(*usr_input, stdin_value + 5, *input_len);
-				
-				if(strncmp(stdin_value, "/play", 5) == 0){ free(stdin_value); return OTHELLO_CLIENT_INPUT_PLAY; }
-				if(strncmp(stdin_value, "/mesg", 5) == 0){ free(stdin_value); return OTHELLO_CLIENT_INPUT_MESG; }
-				if(strncmp(stdin_value, "/join", 5) == 0){ free(stdin_value); return OTHELLO_CLIENT_INPUT_JOIN; }
-				if(strncmp(stdin_value, "/nick", 5) == 0){ free(stdin_value); return OTHELLO_CLIENT_INPUT_NICK; }
 			}
-			
+
 			if(stdin_real_len > 7){
 				if(stdin_real_len == 8){
 					if(strncmp(stdin_value, "/connect", 8) == 0){
@@ -396,7 +396,7 @@ othello_client_enum_t othello_read_user_input(char** usr_input, size_t* input_le
 								exit(1);
 							}
 							*usr_input = realloc_input;
-							memcpy(*usr_input, stdin_value + 10, *input_len);
+							memcpy(*usr_input, stdin_value + 9, *input_len);
 							free(stdin_value);
 							return OTHELLO_CLIENT_INPUT_CONNECT;
 						}
@@ -404,6 +404,27 @@ othello_client_enum_t othello_read_user_input(char** usr_input, size_t* input_le
 				}
 			}
 
+			if(stdin_real_len > 5){
+				if(strncmp(stdin_value, "/ready", 6) == 0){
+					input_len = 0;
+					free(stdin_value);
+					return OTHELLO_CLIENT_INPUT_READY; }
+
+				*input_len = stdin_real_len - 5;
+				
+				if((realloc_input = (char*)realloc(*usr_input, (*input_len) * sizeof(char))) == NULL){
+					printf("Error reallocating user_input\n");
+					exit(1);
+				}
+				*usr_input = realloc_input;
+				memcpy(*usr_input, stdin_value + 5, *input_len);
+				
+				if(strncmp(stdin_value, "/play", 5) == 0){ free(stdin_value); return OTHELLO_CLIENT_INPUT_PLAY; }
+				if(strncmp(stdin_value, "/mesg", 5) == 0){ free(stdin_value); return OTHELLO_CLIENT_INPUT_MESG; }
+				if(strncmp(stdin_value, "/join", 5) == 0){ free(stdin_value); return OTHELLO_CLIENT_INPUT_JOIN; }
+				if(strncmp(stdin_value, "/nick", 5) == 0){ free(stdin_value); return OTHELLO_CLIENT_INPUT_NICK; }
+			}
+			
 			if(stdin_real_len > 8){
 				if(strncmp(stdin_value, "/notready", 9) == 0){
 					input_len = 0;
