@@ -483,7 +483,8 @@ othello_status_t othello_handle_ready(othello_player_t *player) {
     }
     pthread_mutex_unlock(&(player->mutex));
 
-    othello_log(LOG_INFO, "%p ready %d / %d", player, players_ready, OTHELLO_ROOM_LENGTH);
+    othello_log(LOG_INFO, "%p ready %d / %d", player, players_ready,
+                OTHELLO_ROOM_LENGTH);
 
     if (players_ready == OTHELLO_ROOM_LENGTH) {
       memset(player->room->grid, 0, sizeof(player->room->grid));
@@ -578,7 +579,7 @@ othello_status_t othello_handle_not_ready(othello_player_t *player) {
  */
 othello_status_t othello_handle_play(othello_player_t *player) {
   unsigned char stroke[2];
-  char reply[2 + 2];/*TODO: fix me*/
+  char reply[2 + 2]; /*TODO: fix me*/
   char notif_play[3];
   char notif_end[2];
   char notif_your_turn[1];
@@ -669,22 +670,21 @@ othello_status_t othello_handle_play(othello_player_t *player) {
       }
     }*/
     player_cursor = player_next;
-          do {
-          if (player_cursor >= player->room->players + OTHELLO_ROOM_LENGTH) {
-            player_cursor = player->room->players;
-          }
-          if (othello_game_able_to_play(*player_cursor)) {
-            player_turn = *player_cursor;
-            break;
-          }
-          if ((score = othello_game_score(*player_cursor)) > best_score) {
-            player_winner = *player_cursor;
-            best_score = score;
-          }
+    do {
+      if (player_cursor >= player->room->players + OTHELLO_ROOM_LENGTH) {
+        player_cursor = player->room->players;
+      }
+      if (othello_game_able_to_play(*player_cursor)) {
+        player_turn = *player_cursor;
+        break;
+      }
+      if ((score = othello_game_score(*player_cursor)) > best_score) {
+        player_winner = *player_cursor;
+        best_score = score;
+      }
 
-          player_cursor++;
-        } while(player_cursor != player_next);
-
+      player_cursor++;
+    } while (player_cursor != player_next);
 
     othello_log(LOG_INFO, "%p play #2 -- %p", player, player_turn);
 
@@ -858,9 +858,9 @@ int othello_game_score(othello_player_t *player) {
 bool othello_game_able_to_play(othello_player_t *player) {
   int i, j;
 
-  for(i = 0; i < OTHELLO_BOARD_LENGTH; i++) {
-    for(j = 0; j < OTHELLO_BOARD_LENGTH; j++) {
-      if(othello_game_is_stroke_valid(player, i, j)) {
+  for (i = 0; i < OTHELLO_BOARD_LENGTH; i++) {
+    for (j = 0; j < OTHELLO_BOARD_LENGTH; j++) {
+      if (othello_game_is_stroke_valid(player, i, j)) {
         return true;
       }
     }
@@ -872,223 +872,258 @@ bool othello_game_able_to_play(othello_player_t *player) {
 /**
  *
  */
-othello_status_t othello_game_play_stroke(othello_player_t *player, unsigned char x, unsigned char y){
-    othello_status_t status;
-	int x_iter,y_iter;
+othello_status_t othello_game_play_stroke(othello_player_t *player,
+                                          unsigned char x, unsigned char y) {
+  othello_status_t status;
+  int x_iter, y_iter;
 
-	if(!othello_game_is_stroke_valid(player, x, y)) {
-	  return OTHELLO_FAILURE;
-	}
+  if (!othello_game_is_stroke_valid(player, x, y)) {
+    return OTHELLO_FAILURE;
+  }
 
-	x_iter = x;
-	y_iter = y;
-	while((x_iter-1 >= 0) && player->room->grid[x_iter-1][y_iter] != player && player->room->grid[x_iter-1][y_iter] != NULL){
-		--x_iter;
-	}
-	if(player->room->grid[x_iter-1][y_iter] == player){
-		while(x_iter < x){
-			player->room->grid[x_iter][y_iter] = player;
-			++x_iter;
-		}
-	}
+  x_iter = x;
+  y_iter = y;
+  while ((x_iter - 1 >= 0) &&
+         player->room->grid[x_iter - 1][y_iter] != player &&
+         player->room->grid[x_iter - 1][y_iter] != NULL) {
+    --x_iter;
+  }
+  if (player->room->grid[x_iter - 1][y_iter] == player) {
+    while (x_iter < x) {
+      player->room->grid[x_iter][y_iter] = player;
+      ++x_iter;
+    }
+  }
 
-	x_iter = x;
-	y_iter = y;
-	while((y_iter+1 <= 7) && player->room->grid[x_iter][y_iter+1] != player && player->room->grid[x_iter][y_iter+1] != NULL){
-		++y_iter;
-	}
-	if(player->room->grid[x_iter][y_iter+1] == player){
-		while(y_iter > y){
-			player->room->grid[x_iter][y_iter] = player;
-			--y_iter;
-		}
-	}
+  x_iter = x;
+  y_iter = y;
+  while ((y_iter + 1 <= 7) &&
+         player->room->grid[x_iter][y_iter + 1] != player &&
+         player->room->grid[x_iter][y_iter + 1] != NULL) {
+    ++y_iter;
+  }
+  if (player->room->grid[x_iter][y_iter + 1] == player) {
+    while (y_iter > y) {
+      player->room->grid[x_iter][y_iter] = player;
+      --y_iter;
+    }
+  }
 
-	x_iter = x;
-	y_iter = y;
-	while((x_iter+1 <= 7) && player->room->grid[x_iter+1][y_iter] != player && player->room->grid[x_iter+1][y_iter] != NULL){
-		++x_iter;
-	}
-	if(player->room->grid[x_iter+1][y_iter] == player){
-		while(x_iter > x){
-			player->room->grid[x_iter][y_iter] = player;
-			--x_iter;
-		}
-	}
+  x_iter = x;
+  y_iter = y;
+  while ((x_iter + 1 <= 7) &&
+         player->room->grid[x_iter + 1][y_iter] != player &&
+         player->room->grid[x_iter + 1][y_iter] != NULL) {
+    ++x_iter;
+  }
+  if (player->room->grid[x_iter + 1][y_iter] == player) {
+    while (x_iter > x) {
+      player->room->grid[x_iter][y_iter] = player;
+      --x_iter;
+    }
+  }
 
-	x_iter = x;
-	y_iter = y;
-	while((y_iter-1 >= 0) && player->room->grid[x_iter][y_iter-1] != player && player->room->grid[x_iter][y_iter-1] != NULL){
-		--y_iter;
-	}
-	if(player->room->grid[x_iter][y_iter-1] == player){
-		while(y_iter < y){
-			player->room->grid[x_iter][y_iter] = player;
-			++y_iter;
-		}
-	}
+  x_iter = x;
+  y_iter = y;
+  while ((y_iter - 1 >= 0) &&
+         player->room->grid[x_iter][y_iter - 1] != player &&
+         player->room->grid[x_iter][y_iter - 1] != NULL) {
+    --y_iter;
+  }
+  if (player->room->grid[x_iter][y_iter - 1] == player) {
+    while (y_iter < y) {
+      player->room->grid[x_iter][y_iter] = player;
+      ++y_iter;
+    }
+  }
 
-	x_iter = x;
-	y_iter = y;
-	while((x_iter-1 >= 0) && (y_iter+1 <= 7) && player->room->grid[x_iter-1][y_iter+1] != player && player->room->grid[x_iter-1][y_iter+1] != NULL){
-		--x_iter;
-		++y_iter;
-	}
-	if(player->room->grid[x_iter-1][y_iter+1] == player){
-		while(x_iter < x){
-			player->room->grid[x_iter][y_iter] = player;
-			++x_iter;
-			--y_iter;
-		}
-	}
+  x_iter = x;
+  y_iter = y;
+  while ((x_iter - 1 >= 0) && (y_iter + 1 <= 7) &&
+         player->room->grid[x_iter - 1][y_iter + 1] != player &&
+         player->room->grid[x_iter - 1][y_iter + 1] != NULL) {
+    --x_iter;
+    ++y_iter;
+  }
+  if (player->room->grid[x_iter - 1][y_iter + 1] == player) {
+    while (x_iter < x) {
+      player->room->grid[x_iter][y_iter] = player;
+      ++x_iter;
+      --y_iter;
+    }
+  }
 
-	x_iter = x;
-	y_iter = y;
-	while((x_iter+1 <= 7) && (y_iter+1 <= 7) && player->room->grid[x_iter+1][y_iter+1] != player && player->room->grid[x_iter+1][y_iter+1] != NULL){
-		++x_iter;
-		++y_iter;
-	}
-	if(player->room->grid[x_iter+1][y_iter+1] == player){
-		while(x_iter > x){
-			player->room->grid[x_iter][y_iter] = player;
-			--x_iter;
-			--y_iter;
-		}
-	}
+  x_iter = x;
+  y_iter = y;
+  while ((x_iter + 1 <= 7) && (y_iter + 1 <= 7) &&
+         player->room->grid[x_iter + 1][y_iter + 1] != player &&
+         player->room->grid[x_iter + 1][y_iter + 1] != NULL) {
+    ++x_iter;
+    ++y_iter;
+  }
+  if (player->room->grid[x_iter + 1][y_iter + 1] == player) {
+    while (x_iter > x) {
+      player->room->grid[x_iter][y_iter] = player;
+      --x_iter;
+      --y_iter;
+    }
+  }
 
-	x_iter = x;
-	y_iter = y;
-	while((x_iter+1 <= 7) && (y_iter-1 >= 0) && player->room->grid[x_iter+1][y_iter-1] != player && player->room->grid[x_iter+1][y_iter-1] != NULL){
-		++x_iter;
-		--y_iter;
-	}
-	if(player->room->grid[x_iter+1][y_iter-1] == player){
-		while(x_iter > x){
-			player->room->grid[x_iter][y_iter] = player;
-			--x_iter;
-			++y_iter;
-		}
-	}
-	x_iter = x;
-	y_iter = y;
-	while((x_iter-1 >= 0) && (y_iter-1 >= 0) && player->room->grid[x_iter-1][y_iter-1] != player && player->room->grid[x_iter-1][y_iter-1] != NULL){
-		--x_iter;
-		--y_iter;
-	}
-	if(player->room->grid[x_iter-1][y_iter-1] == player){
-		while(x_iter > x){
-			player->room->grid[x_iter][y_iter] = player;
-			++x_iter;
-			++y_iter;
-		}
-	}
+  x_iter = x;
+  y_iter = y;
+  while ((x_iter + 1 <= 7) && (y_iter - 1 >= 0) &&
+         player->room->grid[x_iter + 1][y_iter - 1] != player &&
+         player->room->grid[x_iter + 1][y_iter - 1] != NULL) {
+    ++x_iter;
+    --y_iter;
+  }
+  if (player->room->grid[x_iter + 1][y_iter - 1] == player) {
+    while (x_iter > x) {
+      player->room->grid[x_iter][y_iter] = player;
+      --x_iter;
+      ++y_iter;
+    }
+  }
+  x_iter = x;
+  y_iter = y;
+  while ((x_iter - 1 >= 0) && (y_iter - 1 >= 0) &&
+         player->room->grid[x_iter - 1][y_iter - 1] != player &&
+         player->room->grid[x_iter - 1][y_iter - 1] != NULL) {
+    --x_iter;
+    --y_iter;
+  }
+  if (player->room->grid[x_iter - 1][y_iter - 1] == player) {
+    while (x_iter > x) {
+      player->room->grid[x_iter][y_iter] = player;
+      ++x_iter;
+      ++y_iter;
+    }
+  }
 
-	return OTHELLO_SUCCESS;
+  return OTHELLO_SUCCESS;
 }
 
 /**
  *
  */
-bool othello_game_is_stroke_valid(othello_player_t *player, unsigned char x, unsigned char y){
-	int x_iter,y_iter,nb_returned;
+bool othello_game_is_stroke_valid(othello_player_t *player, unsigned char x,
+                                  unsigned char y) {
+  int x_iter, y_iter, nb_returned;
 
-	if (player->room->grid[x][y] != NULL || x >= OTHELLO_BOARD_LENGTH || y >= OTHELLO_BOARD_LENGTH) {
-		return false;
-		}
+  if (player->room->grid[x][y] != NULL || x >= OTHELLO_BOARD_LENGTH ||
+      y >= OTHELLO_BOARD_LENGTH) {
+    return false;
+  }
 
-	nb_returned = 0;
-	x_iter = x;
-	y_iter = y;
-	while((x_iter-1 >= 0) && player->room->grid[x_iter-1][y_iter] != player && player->room->grid[x_iter-1][y_iter] != NULL){
-		--x_iter;
-		++nb_returned;
-	}
-	if(player->room->grid[x_iter-1][y_iter] == player){
-		return (nb_returned > 0);
-	}
+  nb_returned = 0;
+  x_iter = x;
+  y_iter = y;
+  while ((x_iter - 1 >= 0) &&
+         player->room->grid[x_iter - 1][y_iter] != player &&
+         player->room->grid[x_iter - 1][y_iter] != NULL) {
+    --x_iter;
+    ++nb_returned;
+  }
+  if (player->room->grid[x_iter - 1][y_iter] == player) {
+    return (nb_returned > 0);
+  }
 
-	nb_returned = 0;
-	x_iter = x;
-	y_iter = y;
-	while((y_iter+1 <= 7) && player->room->grid[x_iter][y_iter+1] != player && player->room->grid[x_iter][y_iter+1] != NULL){
-		++y_iter;
-		++nb_returned;
-	}
-	if(player->room->grid[x_iter][y_iter+1] == player){
-		return (nb_returned > 0);
-	}
+  nb_returned = 0;
+  x_iter = x;
+  y_iter = y;
+  while ((y_iter + 1 <= 7) &&
+         player->room->grid[x_iter][y_iter + 1] != player &&
+         player->room->grid[x_iter][y_iter + 1] != NULL) {
+    ++y_iter;
+    ++nb_returned;
+  }
+  if (player->room->grid[x_iter][y_iter + 1] == player) {
+    return (nb_returned > 0);
+  }
 
-	nb_returned = 0;
-	x_iter = x;
-	y_iter = y;
-	while((x_iter+1 <= 7) && player->room->grid[x_iter+1][y_iter] != player && player->room->grid[x_iter+1][y_iter] != NULL){
-		++x_iter;
-		++nb_returned;
-	}
-	if(player->room->grid[x_iter+1][y_iter] == player){
-		return (nb_returned > 0);
-	}
+  nb_returned = 0;
+  x_iter = x;
+  y_iter = y;
+  while ((x_iter + 1 <= 7) &&
+         player->room->grid[x_iter + 1][y_iter] != player &&
+         player->room->grid[x_iter + 1][y_iter] != NULL) {
+    ++x_iter;
+    ++nb_returned;
+  }
+  if (player->room->grid[x_iter + 1][y_iter] == player) {
+    return (nb_returned > 0);
+  }
 
-	nb_returned = 0;
-	x_iter = x;
-	y_iter = y;
-	while((y_iter-1 >= 0) && player->room->grid[x_iter][y_iter-1] != player && player->room->grid[x_iter][y_iter-1] != NULL){
-		--y_iter;
-		++nb_returned;
-	}
-	if(player->room->grid[x_iter][y_iter-1] == player){
-		return (nb_returned > 0);
-	}
+  nb_returned = 0;
+  x_iter = x;
+  y_iter = y;
+  while ((y_iter - 1 >= 0) &&
+         player->room->grid[x_iter][y_iter - 1] != player &&
+         player->room->grid[x_iter][y_iter - 1] != NULL) {
+    --y_iter;
+    ++nb_returned;
+  }
+  if (player->room->grid[x_iter][y_iter - 1] == player) {
+    return (nb_returned > 0);
+  }
 
-	nb_returned = 0;
-	x_iter = x;
-	y_iter = y;
-	while((x_iter-1 >= 0) && (y_iter+1 <= 7) && player->room->grid[x_iter-1][y_iter+1] != player && player->room->grid[x_iter-1][y_iter+1] != NULL){
-		--x_iter;
-		++y_iter;
-		++nb_returned;
-	}
-	if(player->room->grid[x_iter-1][y_iter+1] == player){
-		return (nb_returned > 0);
-	}
+  nb_returned = 0;
+  x_iter = x;
+  y_iter = y;
+  while ((x_iter - 1 >= 0) && (y_iter + 1 <= 7) &&
+         player->room->grid[x_iter - 1][y_iter + 1] != player &&
+         player->room->grid[x_iter - 1][y_iter + 1] != NULL) {
+    --x_iter;
+    ++y_iter;
+    ++nb_returned;
+  }
+  if (player->room->grid[x_iter - 1][y_iter + 1] == player) {
+    return (nb_returned > 0);
+  }
 
-	nb_returned = 0;
-	x_iter = x;
-	y_iter = y;
-	while((x_iter+1 <= 7) && (y_iter+1 <= 7) && player->room->grid[x_iter+1][y_iter+1] != player && player->room->grid[x_iter+1][y_iter+1] != NULL){
-		++x_iter;
-		++y_iter;
-		++nb_returned;
-	}
-	if(player->room->grid[x_iter+1][y_iter+1] == player){
-		return (nb_returned > 0);
-	}
+  nb_returned = 0;
+  x_iter = x;
+  y_iter = y;
+  while ((x_iter + 1 <= 7) && (y_iter + 1 <= 7) &&
+         player->room->grid[x_iter + 1][y_iter + 1] != player &&
+         player->room->grid[x_iter + 1][y_iter + 1] != NULL) {
+    ++x_iter;
+    ++y_iter;
+    ++nb_returned;
+  }
+  if (player->room->grid[x_iter + 1][y_iter + 1] == player) {
+    return (nb_returned > 0);
+  }
 
-	nb_returned = 0;
-	x_iter = x;
-	y_iter = y;
-	while((x_iter+1 <= 7) && (y_iter-1 >= 0) && player->room->grid[x_iter+1][y_iter-1] != player && player->room->grid[x_iter+1][y_iter-1] != NULL){
-		++x_iter;
-		--y_iter;
-		++nb_returned;
-	}
-	if(player->room->grid[x_iter+1][y_iter-1] == player){
-		return (nb_returned > 0);
-	}
+  nb_returned = 0;
+  x_iter = x;
+  y_iter = y;
+  while ((x_iter + 1 <= 7) && (y_iter - 1 >= 0) &&
+         player->room->grid[x_iter + 1][y_iter - 1] != player &&
+         player->room->grid[x_iter + 1][y_iter - 1] != NULL) {
+    ++x_iter;
+    --y_iter;
+    ++nb_returned;
+  }
+  if (player->room->grid[x_iter + 1][y_iter - 1] == player) {
+    return (nb_returned > 0);
+  }
 
-	nb_returned = 0;
-	x_iter = x;
-	y_iter = y;
-	while((x_iter-1 >= 0) && (y_iter-1 >= 0) && player->room->grid[x_iter-1][y_iter-1] != player && player->room->grid[x_iter-1][y_iter-1] != NULL){
-		--x_iter;
-		--y_iter;
-		++nb_returned;
-	}
-	if(player->room->grid[x_iter-1][y_iter-1] == player){
-		return (nb_returned > 0);
-	}
+  nb_returned = 0;
+  x_iter = x;
+  y_iter = y;
+  while ((x_iter - 1 >= 0) && (y_iter - 1 >= 0) &&
+         player->room->grid[x_iter - 1][y_iter - 1] != player &&
+         player->room->grid[x_iter - 1][y_iter - 1] != NULL) {
+    --x_iter;
+    --y_iter;
+    ++nb_returned;
+  }
+  if (player->room->grid[x_iter - 1][y_iter - 1] == player) {
+    return (nb_returned > 0);
+  }
 
-	return false;
+  return false;
 }
 
 /**
