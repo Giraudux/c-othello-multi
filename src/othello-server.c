@@ -632,6 +632,11 @@ othello_status_t othello_handle_play(othello_player_t *player) {
       player->ready) {
 
     othello_log(LOG_INFO, "%p play [%d, %d]", player, stroke[0], stroke[1]);
+    if (othello_game_is_stroke_valid(player, stroke[0], stroke[1])) {
+      othello_log(LOG_INFO, "%p play stroke is valid", player);
+    } else {
+      othello_log(LOG_INFO, "%p play stroke is invalid", player);
+    }
 
     print_grid(player);
 
@@ -1040,20 +1045,18 @@ othello_status_t othello_game_play_stroke(othello_player_t *player,
 /**
  *
  */
-bool othello_game_is_stroke_valid(othello_player_t *player, unsigned char x,
-                                  unsigned char y) {
-  int x_iter, y_iter, nb_returned;
+int othello_game_is_stroke_valid(othello_player_t *player, unsigned char x,
+                                 unsigned char y) {
+  int x_iter, y_iter, nb_returned, final_returned;
 
-  /*TODO DEBUG HERE FOR 3 / 7 INPUT -> SERVER RETURN FALSE WHEN IT SHOULD BE
-   * OK*/
-
-  printf("DEBUG -------- %d // %d\n", x, y);
   if (player->room->grid[x][y] != NULL || x >= OTHELLO_BOARD_LENGTH ||
       y >= OTHELLO_BOARD_LENGTH) {
-    return false;
+    return 0;
   }
 
   nb_returned = 0;
+  final_returned = 0;
+
   x_iter = x;
   y_iter = y;
   while ((x_iter - 1 >= 0) &&
@@ -1064,9 +1067,10 @@ bool othello_game_is_stroke_valid(othello_player_t *player, unsigned char x,
   }
   if ((x_iter - 1 >= 0)) {
     if (player->room->grid[x_iter - 1][y_iter] == player) {
-      return (nb_returned > 0);
+      final_returned += nb_returned;
     }
   }
+
   nb_returned = 0;
   x_iter = x;
   y_iter = y;
@@ -1078,9 +1082,10 @@ bool othello_game_is_stroke_valid(othello_player_t *player, unsigned char x,
   }
   if ((y_iter + 1 <= 7)) {
     if (player->room->grid[x_iter][y_iter + 1] == player) {
-      return (nb_returned > 0);
+      final_returned += nb_returned;
     }
   }
+
   nb_returned = 0;
   x_iter = x;
   y_iter = y;
@@ -1092,9 +1097,10 @@ bool othello_game_is_stroke_valid(othello_player_t *player, unsigned char x,
   }
   if ((x_iter + 1 <= 7)) {
     if (player->room->grid[x_iter + 1][y_iter] == player) {
-      return (nb_returned > 0);
+      final_returned += nb_returned;
     }
   }
+
   nb_returned = 0;
   x_iter = x;
   y_iter = y;
@@ -1106,9 +1112,10 @@ bool othello_game_is_stroke_valid(othello_player_t *player, unsigned char x,
   }
   if ((y_iter - 1 >= 0)) {
     if (player->room->grid[x_iter][y_iter - 1] == player) {
-      return (nb_returned > 0);
+      final_returned += nb_returned;
     }
   }
+
   nb_returned = 0;
   x_iter = x;
   y_iter = y;
@@ -1121,9 +1128,10 @@ bool othello_game_is_stroke_valid(othello_player_t *player, unsigned char x,
   }
   if ((x_iter - 1 >= 0) && (y_iter + 1 <= 7)) {
     if (player->room->grid[x_iter - 1][y_iter + 1] == player) {
-      return (nb_returned > 0);
+      final_returned += nb_returned;
     }
   }
+
   nb_returned = 0;
   x_iter = x;
   y_iter = y;
@@ -1136,7 +1144,7 @@ bool othello_game_is_stroke_valid(othello_player_t *player, unsigned char x,
   }
   if ((x_iter + 1 <= 7) && (y_iter + 1 <= 7)) {
     if (player->room->grid[x_iter + 1][y_iter + 1] == player) {
-      return (nb_returned > 0);
+      final_returned += nb_returned;
     }
   }
 
@@ -1152,7 +1160,7 @@ bool othello_game_is_stroke_valid(othello_player_t *player, unsigned char x,
   }
   if ((x_iter + 1 <= 7) && (y_iter - 1 >= 0)) {
     if (player->room->grid[x_iter + 1][y_iter - 1] == player) {
-      return (nb_returned > 0);
+      final_returned += nb_returned;
     }
   }
 
@@ -1168,10 +1176,10 @@ bool othello_game_is_stroke_valid(othello_player_t *player, unsigned char x,
   }
   if ((x_iter - 1 >= 0) && (y_iter - 1 >= 0)) {
     if (player->room->grid[x_iter - 1][y_iter - 1] == player) {
-      return (nb_returned > 0);
+      final_returned += nb_returned;
     }
   }
-  return false;
+  return final_returned;
 }
 
 /**

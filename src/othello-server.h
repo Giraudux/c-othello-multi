@@ -38,8 +38,8 @@ int othello_game_score(othello_player_t *player);
 bool othello_game_able_to_play(othello_player_t *player);
 othello_status_t othello_game_play_stroke(othello_player_t *player,
                                           unsigned char x, unsigned char y);
-bool othello_game_is_stroke_valid(othello_player_t *player, unsigned char x,
-                                  unsigned char y);
+int othello_game_is_stroke_valid(othello_player_t *player, unsigned char x,
+                                 unsigned char y);
 
 int main(int argc, char *argv[]);
 
