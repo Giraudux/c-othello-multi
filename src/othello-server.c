@@ -574,6 +574,24 @@ othello_status_t othello_handle_not_ready(othello_player_t *player) {
   return status;
 }
 
+void print_grid(othello_player_t * player) {
+  int i, j;
+
+  for(i = 0; i < OTHELLO_BOARD_LENGTH; i++) {
+    for(j = 0; j < OTHELLO_BOARD_LENGTH; j++) {
+      if(player->room->grid[i][j] == player) {
+        putc('x', stdout);
+      } else if (player->room->grid[i][j] == NULL) {
+        putc('*', stdout);
+      } else {
+        putc('o', stdout);
+      }
+    }
+    putc('\n', stdout);
+  }
+  putc('\n', stdout);
+}
+
 /**
  *
  */
@@ -614,6 +632,8 @@ othello_status_t othello_handle_play(othello_player_t *player) {
 
     othello_log(LOG_INFO, "%p play [%d, %d]", player, stroke[0], stroke[1]);
 
+    print_grid(player);
+
     pthread_mutex_lock(&(player->room->mutex));
     if (othello_game_play_stroke(player, stroke[0], stroke[1]) ==
         OTHELLO_SUCCESS) {
@@ -621,6 +641,8 @@ othello_status_t othello_handle_play(othello_player_t *player) {
       player->ready = false;
     }
     pthread_mutex_unlock(&(player->room->mutex));
+
+    print_grid(player);
 
     pthread_mutex_lock(&(player->mutex));
     if (othello_write_all(player->socket, reply, sizeof(reply)) <= 0) {
@@ -874,12 +896,13 @@ bool othello_game_able_to_play(othello_player_t *player) {
  */
 othello_status_t othello_game_play_stroke(othello_player_t *player,
                                           unsigned char x, unsigned char y) {
-  othello_status_t status;
   int x_iter, y_iter;
 
   if (!othello_game_is_stroke_valid(player, x, y)) {
     return OTHELLO_FAILURE;
   }
+
+  player->room->grid[x][y] = player;
 
   x_iter = x;
   y_iter = y;
