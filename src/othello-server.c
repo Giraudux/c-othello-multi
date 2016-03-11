@@ -1017,7 +1017,7 @@ othello_status_t othello_game_play_stroke(othello_player_t *player,
     --y_iter;
   }
   if (player->room->grid[x_iter - 1][y_iter - 1] == player) {
-    while (x_iter > x) {
+    while (x_iter < x) {
       player->room->grid[x_iter][y_iter] = player;
       ++x_iter;
       ++y_iter;

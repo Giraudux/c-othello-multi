@@ -8,6 +8,7 @@ client <adresse-serveur> <message-a-transmettre>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <string.h>
+#include <time.h>
 
 #include <stdbool.h>
 #include "othello.h"
@@ -261,7 +262,7 @@ void othello_return_tokens(int x, int y, char color){
 		--y_iter;
 	}
 	if(othello_board[x_iter-1][y_iter-1] == color){
-		while(x_iter > x){
+		while(x_iter < x){
 			othello_board[x_iter][y_iter] = color;
 			++x_iter;
 			++y_iter;
@@ -400,6 +401,10 @@ othello_client_enum_t othello_read_user_input(char** usr_input, size_t* input_le
 					free(stdin_value);
 					input_len = 0;
 					return OTHELLO_CLIENT_INPUT_EXIT; }
+				if(strncmp(stdin_value, "/auto", 5) == 0){ 
+					free(stdin_value);
+					input_len = 0;
+					return OTHELLO_CLIENT_INPUT_AUTO; }
 			}
 
 			if(stdin_real_len > 7){
@@ -444,7 +449,6 @@ othello_client_enum_t othello_read_user_input(char** usr_input, size_t* input_le
 				if(strncmp(stdin_value, "/mesg", 5) == 0){ free(stdin_value); return OTHELLO_CLIENT_INPUT_MESG; }
 				if(strncmp(stdin_value, "/join", 5) == 0){ free(stdin_value); return OTHELLO_CLIENT_INPUT_JOIN; }
 				if(strncmp(stdin_value, "/nick", 5) == 0){ free(stdin_value); return OTHELLO_CLIENT_INPUT_NICK; }
-				if(strncmp(stdin_value, "/auto", 5) == 0){ free(stdin_value); return OTHELLO_CLIENT_INPUT_AUTO; }
 			}
 			
 			if(stdin_real_len > 8){
@@ -584,6 +588,7 @@ void othello_send_auto_move(int socket_descriptor){
 	user_input[0] = OTHELLO_QUERY_PLAY;
 	user_input[1] = i;
 	user_input[2] = j;
+	printf("COMPUTER CHOOSED ( %d / %d ) MOVE !!\n",i,j);
 	othello_write_mesg(socket_descriptor, user_input, sizeof user_input);
 }
 
@@ -722,6 +727,7 @@ void othello_notif_not_ready(int socket_descriptor){
 
 void othello_notif_play(int socket_descriptor, char color){
 	printf("Opponent just played!\n");
+	othello_display_board();
 	othello_place_token(socket_descriptor,color);
 }
 
@@ -739,6 +745,7 @@ void othello_notif_your_turn(int socket_descriptor){
 	othello_display_moves();
 	othello_display_board();
 	if(auto_mode)
+		//usleep(100000);
 		othello_send_auto_move(socket_descriptor);
 }
 void othello_notif_start(int socket_descriptor){
@@ -788,40 +795,43 @@ void* othello_write_thread(void* sock){
 
 	while(client_state != OTHELLO_CLIENT_STATE_EXIT){
 	
-		if(!auto_mode)
+		if(!auto_mode){
 			input_type = othello_read_user_input(&usr_input, &input_len);
 
-		switch(input_type){
-			case OTHELLO_CLIENT_INPUT_NICK:
-				othello_choose_nickname(socket_descriptor, usr_input, input_len);
-			break;
-			case OTHELLO_CLIENT_INPUT_LIST:
-				othello_ask_list(socket_descriptor);
-			break;
-			case OTHELLO_CLIENT_INPUT_JOIN:
-				othello_choose_room(socket_descriptor, usr_input, input_len);
-			break;
-			case OTHELLO_CLIENT_INPUT_READY:
-				othello_send_ready(socket_descriptor);
-			break;
-			case OTHELLO_CLIENT_INPUT_NOT_READY:
-				othello_send_not_ready(socket_descriptor);
-			break;
-			case OTHELLO_CLIENT_INPUT_PLAY:
-				othello_send_move(socket_descriptor, usr_input, input_len);
-			break;
-			case OTHELLO_CLIENT_INPUT_MESG:
-				othello_send_mesg(socket_descriptor, usr_input, input_len);
-			break;
-			case OTHELLO_CLIENT_INPUT_AUTO:
-				auto_mode = !auto_mode;
-			break;
-			case OTHELLO_CLIENT_INPUT_EXIT:
-				client_state = OTHELLO_CLIENT_STATE_EXIT;
-			break;
-			default:
+			switch(input_type){
+				case OTHELLO_CLIENT_INPUT_NICK:
+					othello_choose_nickname(socket_descriptor, usr_input, input_len);
+				break;
+				case OTHELLO_CLIENT_INPUT_LIST:
+					othello_ask_list(socket_descriptor);
+				break;
+				case OTHELLO_CLIENT_INPUT_JOIN:
+					othello_choose_room(socket_descriptor, usr_input, input_len);
+				break;
+				case OTHELLO_CLIENT_INPUT_READY:
+					othello_send_ready(socket_descriptor);
+				break;
+				case OTHELLO_CLIENT_INPUT_NOT_READY:
+					othello_send_not_ready(socket_descriptor);
+				break;
+				case OTHELLO_CLIENT_INPUT_PLAY:
+					othello_send_move(socket_descriptor, usr_input, input_len);
+				break;
+				case OTHELLO_CLIENT_INPUT_MESG:
+					othello_send_mesg(socket_descriptor, usr_input, input_len);
+				break;
+				case OTHELLO_CLIENT_INPUT_AUTO:
+					auto_mode = !auto_mode;
+					if(client_state = OTHELLO_CLIENT_STATE_PLAYING)
+						othello_send_auto_move(socket_descriptor);
+				break;
+				case OTHELLO_CLIENT_INPUT_EXIT:
+					client_state = OTHELLO_CLIENT_STATE_EXIT;
+				break;
+				default:
 				
-			break;
+				break;
+			}
 		}
 	}
 	free(usr_input);
