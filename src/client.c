@@ -19,6 +19,7 @@ othello_client_enum_t client_state;
 char othello_board[OTHELLO_BOARD_LENGTH][OTHELLO_BOARD_LENGTH];
 char my_color;
 char opponent_color;
+bool auto_mode;
 
 int main(int argc, char **argv) {
     int socket_descriptor; /* socket descriptor */
@@ -85,7 +86,8 @@ hostent* othello_ask_server_adress(){
 }
 
 void othello_init_board(){
-	int i,j;	
+	int i,j;
+	auto_mode = false;	
 	for (i = 0; i < OTHELLO_BOARD_LENGTH; ++i){
 		for(j = 0; j < OTHELLO_BOARD_LENGTH; ++j){
 			othello_board[i][j] = '*';
@@ -135,8 +137,25 @@ void othello_display_moves(){
 	printf("Possible moves : \n");
 	for (i = 0; i < OTHELLO_BOARD_LENGTH; ++i){
 		for(j = 0; j < OTHELLO_BOARD_LENGTH; ++j){
-			if(othello_move_valid(i,j,my_color)){
+			if(othello_move_valid(i,j,my_color) > 0){
 				printf("(%c;%d) ",(char)(i + 65),j+1);
+			}
+		}
+	}
+	printf("\n");
+}
+
+void othello_calc_best_move(int* x_pos, int* y_pos){
+	int i,j;
+	int returned = 0;
+	int max_returned = 0;
+	for (i = 0; i < OTHELLO_BOARD_LENGTH; ++i){
+		for(j = 0; j < OTHELLO_BOARD_LENGTH; ++j){
+			if((returned = othello_move_valid(i,j,my_color)) > 0){
+				if(returned > max_returned){
+					*x_pos = i;
+					*y_pos = j;
+				}
 			}
 		}
 	}
@@ -250,13 +269,15 @@ void othello_return_tokens(int x, int y, char color){
 	}
 }
 
-bool othello_move_valid(int x, int y, char color){
-	int x_iter,y_iter,nb_returned;
+int othello_move_valid(int x, int y, char color){
+	int x_iter,y_iter,nb_returned,final_returned;
 
 	if (othello_board[x][y] != '*')
-		return false;
+		return 0;
 
 	nb_returned = 0;
+	final_returned = 0;
+
 	x_iter = x;
 	y_iter = y;
 	while((x_iter-1 >= 0) && othello_board[x_iter-1][y_iter] != color && othello_board[x_iter-1][y_iter] != '*'){
@@ -264,7 +285,7 @@ bool othello_move_valid(int x, int y, char color){
 		++nb_returned;
 	}
 	if(othello_board[x_iter-1][y_iter] == color){
-		return (nb_returned > 0);
+		final_returned += nb_returned;
 	}
 
 	nb_returned = 0;
@@ -275,7 +296,7 @@ bool othello_move_valid(int x, int y, char color){
 		++nb_returned;
 	}
 	if(othello_board[x_iter][y_iter+1] == color){
-		return (nb_returned > 0);
+		final_returned += nb_returned;
 	}
 	
 	nb_returned = 0;
@@ -286,7 +307,7 @@ bool othello_move_valid(int x, int y, char color){
 		++nb_returned;
 	}
 	if(othello_board[x_iter+1][y_iter] == color){
-		return (nb_returned > 0);
+		final_returned += nb_returned;
 	}
 
 	nb_returned = 0;
@@ -297,7 +318,7 @@ bool othello_move_valid(int x, int y, char color){
 		++nb_returned;
 	}
 	if(othello_board[x_iter][y_iter-1] == color){
-		return (nb_returned > 0);
+		final_returned += nb_returned;
 	}
 	
 	nb_returned = 0;
@@ -309,7 +330,7 @@ bool othello_move_valid(int x, int y, char color){
 		++nb_returned;
 	}
 	if(othello_board[x_iter-1][y_iter+1] == color){
-		return (nb_returned > 0);
+		final_returned += nb_returned;
 	}
 
 	nb_returned = 0;
@@ -321,7 +342,7 @@ bool othello_move_valid(int x, int y, char color){
 		++nb_returned;
 	}
 	if(othello_board[x_iter+1][y_iter+1] == color){
-		return (nb_returned > 0);
+		final_returned += nb_returned;
 	}
 
 	nb_returned = 0;
@@ -333,7 +354,7 @@ bool othello_move_valid(int x, int y, char color){
 		++nb_returned;
 	}
 	if(othello_board[x_iter+1][y_iter-1] == color){
-		return (nb_returned > 0);
+		final_returned += nb_returned;
 	}
 	
 	nb_returned = 0;
@@ -345,9 +366,9 @@ bool othello_move_valid(int x, int y, char color){
 		++nb_returned;
 	}
 	if(othello_board[x_iter-1][y_iter-1] == color){
-		return (nb_returned > 0);
+		final_returned += nb_returned;
 	}
-	return false;
+	return final_returned;
 }
 
 othello_client_enum_t othello_read_user_input(char** usr_input, size_t* input_len){
@@ -423,6 +444,7 @@ othello_client_enum_t othello_read_user_input(char** usr_input, size_t* input_le
 				if(strncmp(stdin_value, "/mesg", 5) == 0){ free(stdin_value); return OTHELLO_CLIENT_INPUT_MESG; }
 				if(strncmp(stdin_value, "/join", 5) == 0){ free(stdin_value); return OTHELLO_CLIENT_INPUT_JOIN; }
 				if(strncmp(stdin_value, "/nick", 5) == 0){ free(stdin_value); return OTHELLO_CLIENT_INPUT_NICK; }
+				if(strncmp(stdin_value, "/auto", 5) == 0){ free(stdin_value); return OTHELLO_CLIENT_INPUT_AUTO; }
 			}
 			
 			if(stdin_real_len > 8){
@@ -553,6 +575,16 @@ void othello_send_move(int socket_descriptor, char* usr_inpt, size_t inpt_len){
 	}else{
 		printf("you can't send a move now!\n");
 	}
+}
+
+void othello_send_auto_move(int socket_descriptor){
+	int i=0, j=0;
+	char user_input[3];
+	othello_calc_best_move(&i, &j);
+	user_input[0] = OTHELLO_QUERY_PLAY;
+	user_input[1] = i;
+	user_input[2] = j;
+	othello_write_mesg(socket_descriptor, user_input, sizeof user_input);
 }
 
 void othello_send_mesg(int socket_descriptor, char* usr_inpt, size_t inpt_len){
@@ -706,6 +738,8 @@ void othello_notif_your_turn(int socket_descriptor){
 	printf("This is your turn to play, enter a move:\n");
 	othello_display_moves();
 	othello_display_board();
+	if(auto_mode)
+		othello_send_auto_move(socket_descriptor);
 }
 void othello_notif_start(int socket_descriptor){
 	char server_answer;
@@ -717,6 +751,8 @@ void othello_notif_start(int socket_descriptor){
 		printf("Your play with '%c' tokens!\n",my_color);
 		printf("You start, enter your move:\n");
 		othello_display_moves();
+		if(auto_mode)
+			othello_send_auto_move(socket_descriptor);
 	}else{
 		my_color = othello_board[OTHELLO_BOARD_LENGTH/2-1][OTHELLO_BOARD_LENGTH/2-1];
 		opponent_color = othello_board[OTHELLO_BOARD_LENGTH/2-1][OTHELLO_BOARD_LENGTH/2];
@@ -751,8 +787,9 @@ void* othello_write_thread(void* sock){
 	printf("You can now enter your nickname :\n");	
 
 	while(client_state != OTHELLO_CLIENT_STATE_EXIT){
-
-		input_type = othello_read_user_input(&usr_input, &input_len);
+	
+		if(!auto_mode)
+			input_type = othello_read_user_input(&usr_input, &input_len);
 
 		switch(input_type){
 			case OTHELLO_CLIENT_INPUT_NICK:
@@ -775,6 +812,9 @@ void* othello_write_thread(void* sock){
 			break;
 			case OTHELLO_CLIENT_INPUT_MESG:
 				othello_send_mesg(socket_descriptor, usr_input, input_len);
+			break;
+			case OTHELLO_CLIENT_INPUT_AUTO:
+				auto_mode = !auto_mode;
 			break;
 			case OTHELLO_CLIENT_INPUT_EXIT:
 				client_state = OTHELLO_CLIENT_STATE_EXIT;
@@ -819,11 +859,11 @@ void* othello_read_thread(void* sock){
 			break;
 
 
-
 			case OTHELLO_NOTIF_ROOM_JOIN:
 				othello_notif_room_join(socket_descriptor);
 			break;
 			case OTHELLO_NOTIF_ROOM_LEAVE:
+				auto_mode = false;
 				othello_notif_room_leave(socket_descriptor);
 			break;
 			case OTHELLO_NOTIF_MESSAGE:
@@ -845,6 +885,7 @@ void* othello_read_thread(void* sock){
 				othello_notif_start(socket_descriptor);
 			break;
 			case OTHELLO_NOTIF_GAME_END:
+				auto_mode = false;
 				othello_notif_end(socket_descriptor);
 			break;
 			default:

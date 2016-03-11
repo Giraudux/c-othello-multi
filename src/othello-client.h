@@ -24,6 +24,7 @@ enum othello_client_enum_e{
 	OTHELLO_CLIENT_INPUT_NOT_READY,
 	OTHELLO_CLIENT_INPUT_PLAY,
 	OTHELLO_CLIENT_INPUT_MESG,
+	OTHELLO_CLIENT_INPUT_AUTO,	
 	OTHELLO_CLIENT_INPUT_EXIT,
 	OTHELLO_CLIENT_INPUT_FAIL
 };
@@ -37,7 +38,7 @@ void othello_display_board();
 bool othello_is_number(char*);
 void othello_return_tokens(int,int,char);
 void othello_place_token(int,char);
-bool othello_move_valid(int,int,char);
+int othello_move_valid(int,int,char);
 /* get a user input into the char* in paramter */
 othello_client_enum_t othello_read_user_input(char**, size_t*);
 /* send the char* to the server using the socket in paramter */
@@ -53,9 +54,11 @@ void othello_choose_room(int, char*, size_t);
 void othello_send_ready(int);
 void othello_send_not_ready(int);
 void othello_send_move(int, char*, size_t);
+void othello_send_auto_move(int);
 void othello_send_mesg(int, char*, size_t);
 /* display the list of possible moves to the user */
 void othello_display_moves();
+void othello_calc_best_move(int*, int*);
 
 void othello_server_message(int);
 void othello_server_ready(int);
