@@ -14,7 +14,7 @@ client <adresse-serveur> <message-a-transmettre>
 #include "othello.h"
 #include "othello-client.h"
 
-#define OTHELLO_DEFAULT_SERVER_ADRESS "78.226.157.77"
+#define OTHELLO_DEFAULT_SERVER_ADRESS "172.16.131.89"
 
 othello_client_enum_t client_state;
 char othello_board[OTHELLO_BOARD_LENGTH][OTHELLO_BOARD_LENGTH];
@@ -105,16 +105,16 @@ void othello_display_board(){
 
 	printf("\n   ");
 	for (i = 0; i < OTHELLO_BOARD_LENGTH; ++i){
-		printf("%d",i+1);
+		printf("%d ",i+1);
 	}
 	printf("\n   ");
-	for (i = 0; i < OTHELLO_BOARD_LENGTH; ++i){
+	for (i = 0; i < OTHELLO_BOARD_LENGTH * 2 - 1; ++i){
 		printf("-");
 	}
 	for (i = 0; i < OTHELLO_BOARD_LENGTH; ++i){
 		printf("\n%c| ",(char)(i+65));
 		for(j = 0; j < OTHELLO_BOARD_LENGTH; ++j){
-			printf("%c",othello_board[i][j]);
+			printf("%c ",othello_board[i][j]);
 		}
 	}
 	printf("\n\n");
@@ -504,7 +504,7 @@ void othello_write_mesg(int sock_descr,char* mesg,size_t msg_len){
 void othello_read_mesg(int sock, char* buff,size_t bytes_to_read){
   ssize_t n;
 	if((n = read(sock, buff, bytes_to_read)) != bytes_to_read){
-		printf("Error : Can't read the server answer : n -> %zu / bytes -> %zu\n",n,bytes_to_read);
+		printf("Error : Can't read the server answer!\n",n,bytes_to_read);
 		
 	}
 }
@@ -850,7 +850,7 @@ void* othello_write_thread(void* sock){
 				break;
 				case OTHELLO_CLIENT_INPUT_AUTO:
 					auto_mode = !auto_mode;
-					if(client_state = OTHELLO_CLIENT_STATE_PLAYING)
+					if(client_state == OTHELLO_CLIENT_STATE_PLAYING)
 						othello_send_auto_move(socket_descriptor);
 				break;
 				case OTHELLO_CLIENT_INPUT_EXIT:
