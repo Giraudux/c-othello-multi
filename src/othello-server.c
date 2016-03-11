@@ -586,6 +586,7 @@ void print_grid(othello_player_t * player) {
       } else {
         putc('o', stdout);
       }
+      putc(' ', stdout);
     }
     putc('\n', stdout);
   }
