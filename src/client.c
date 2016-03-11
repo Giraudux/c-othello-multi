@@ -171,34 +171,38 @@ void othello_return_tokens(int x, int y, char color){
 	while((x_iter-1 >= 0) && othello_board[x_iter-1][y_iter] != color && othello_board[x_iter-1][y_iter] != '*'){
 		--x_iter;
 	}
-	if(othello_board[x_iter-1][y_iter] == color){
-		while(x_iter < x){
-			othello_board[x_iter][y_iter] = color;
-			++x_iter;
+	if((x_iter-1 >= 0)){
+		if(othello_board[x_iter-1][y_iter] == color){
+			while(x_iter < x){
+				othello_board[x_iter][y_iter] = color;
+				++x_iter;
+			}
 		}
 	}
-
 	x_iter = x;
 	y_iter = y;
 	while((y_iter+1 <= 7) && othello_board[x_iter][y_iter+1] != color && othello_board[x_iter][y_iter+1] != '*'){
 		++y_iter;
 	}
-	if(othello_board[x_iter][y_iter+1] == color){
-		while(y_iter > y){
-			othello_board[x_iter][y_iter] = color;
-			--y_iter;
+	if((y_iter+1 <= 7)){
+		if(othello_board[x_iter][y_iter+1] == color){
+			while(y_iter > y){
+				othello_board[x_iter][y_iter] = color;
+				--y_iter;
+			}
 		}
 	}
-	
 	x_iter = x;
 	y_iter = y;
 	while((x_iter+1 <= 7) && othello_board[x_iter+1][y_iter] != color && othello_board[x_iter+1][y_iter] != '*'){
 		++x_iter;
 	}
-	if(othello_board[x_iter+1][y_iter] == color){
-		while(x_iter > x){
-			othello_board[x_iter][y_iter] = color;
-			--x_iter;
+	if((x_iter+1 <= 7)){
+		if(othello_board[x_iter+1][y_iter] == color){
+			while(x_iter > x){
+				othello_board[x_iter][y_iter] = color;
+				--x_iter;
+			}
 		}
 	}
 
@@ -207,10 +211,12 @@ void othello_return_tokens(int x, int y, char color){
 	while((y_iter-1 >= 0) && othello_board[x_iter][y_iter-1] != color && othello_board[x_iter][y_iter-1] != '*'){		
 		--y_iter;
 	}
-	if(othello_board[x_iter][y_iter-1] == color){
-		while(y_iter < y){
-			othello_board[x_iter][y_iter] = color;
-			++y_iter;
+	if((y_iter-1 >= 0)){
+		if(othello_board[x_iter][y_iter-1] == color){
+			while(y_iter < y){
+				othello_board[x_iter][y_iter] = color;
+				++y_iter;
+			}
 		}
 	}
 	
@@ -220,39 +226,43 @@ void othello_return_tokens(int x, int y, char color){
 		--x_iter;
 		++y_iter;
 	}
-	if(othello_board[x_iter-1][y_iter+1] == color){
-		while(x_iter < x){
-			othello_board[x_iter][y_iter] = color;
-			++x_iter;
-			--y_iter;
+	if((x_iter-1 >= 0) && (y_iter+1 <= 7)){
+		if(othello_board[x_iter-1][y_iter+1] == color){
+			while(x_iter < x){
+				othello_board[x_iter][y_iter] = color;
+				++x_iter;
+				--y_iter;
+			}
 		}
 	}
-
 	x_iter = x;
 	y_iter = y;
 	while((x_iter+1 <= 7) && (y_iter+1 <= 7) && othello_board[x_iter+1][y_iter+1] != color && othello_board[x_iter+1][y_iter+1] != '*'){
 		++x_iter;
 		++y_iter;
 	}
-	if(othello_board[x_iter+1][y_iter+1] == color){
-		while(x_iter > x){
-			othello_board[x_iter][y_iter] = color;
-			--x_iter;
-			--y_iter;
+	if((x_iter+1 <= 7) && (y_iter+1 <= 7)){
+		if(othello_board[x_iter+1][y_iter+1] == color){
+			while(x_iter > x){
+				othello_board[x_iter][y_iter] = color;
+				--x_iter;
+				--y_iter;
+			}
 		}
 	}
-
 	x_iter = x;
 	y_iter = y;
 	while((x_iter+1 <= 7) && (y_iter-1 >= 0) && othello_board[x_iter+1][y_iter-1] != color && othello_board[x_iter+1][y_iter-1] != '*'){
 		++x_iter;
 		--y_iter;
 	}
-	if(othello_board[x_iter+1][y_iter-1] == color){
-		while(x_iter > x){
-			othello_board[x_iter][y_iter] = color;
-			--x_iter;
-			++y_iter;
+	if((x_iter+1 <= 7) && (y_iter-1 >= 0)){
+		if(othello_board[x_iter+1][y_iter-1] == color){
+			while(x_iter > x){
+				othello_board[x_iter][y_iter] = color;
+				--x_iter;
+				++y_iter;
+			}
 		}
 	}
 	x_iter = x;
@@ -261,11 +271,13 @@ void othello_return_tokens(int x, int y, char color){
 		--x_iter;
 		--y_iter;
 	}
-	if(othello_board[x_iter-1][y_iter-1] == color){
-		while(x_iter < x){
-			othello_board[x_iter][y_iter] = color;
-			++x_iter;
-			++y_iter;
+	if((x_iter-1 >= 0) && (y_iter-1 >= 0)){
+		if(othello_board[x_iter-1][y_iter-1] == color){
+			while(x_iter < x){
+				othello_board[x_iter][y_iter] = color;
+				++x_iter;
+				++y_iter;
+			}
 		}
 	}
 }
@@ -279,14 +291,16 @@ int othello_move_valid(int x, int y, char color){
 	nb_returned = 0;
 	final_returned = 0;
 
-	x_iter = x;
-	y_iter = y;
+	x_iter = x; // 6
+	y_iter = y; // 7
 	while((x_iter-1 >= 0) && othello_board[x_iter-1][y_iter] != color && othello_board[x_iter-1][y_iter] != '*'){
 		--x_iter;
 		++nb_returned;
 	}
-	if(othello_board[x_iter-1][y_iter] == color){
-		final_returned += nb_returned;
+	if((x_iter-1 >= 0)){
+		if(othello_board[x_iter-1][y_iter] == color){
+			final_returned += nb_returned;
+		}
 	}
 
 	nb_returned = 0;
@@ -296,8 +310,10 @@ int othello_move_valid(int x, int y, char color){
 		++y_iter;
 		++nb_returned;
 	}
-	if(othello_board[x_iter][y_iter+1] == color){
-		final_returned += nb_returned;
+	if((y_iter+1 <= 7)){
+		if(othello_board[x_iter][y_iter+1] == color){
+			final_returned += nb_returned;
+		}
 	}
 	
 	nb_returned = 0;
@@ -307,8 +323,10 @@ int othello_move_valid(int x, int y, char color){
 		++x_iter;
 		++nb_returned;
 	}
-	if(othello_board[x_iter+1][y_iter] == color){
-		final_returned += nb_returned;
+	if((x_iter+1 <= 7)){
+		if(othello_board[x_iter+1][y_iter] == color){
+			final_returned += nb_returned;
+		}
 	}
 
 	nb_returned = 0;
@@ -318,8 +336,10 @@ int othello_move_valid(int x, int y, char color){
 		--y_iter;
 		++nb_returned;
 	}
-	if(othello_board[x_iter][y_iter-1] == color){
-		final_returned += nb_returned;
+	if((y_iter-1 >= 0)){
+		if(othello_board[x_iter][y_iter-1] == color){
+			final_returned += nb_returned;
+		}
 	}
 	
 	nb_returned = 0;
@@ -330,8 +350,10 @@ int othello_move_valid(int x, int y, char color){
 		++y_iter;
 		++nb_returned;
 	}
-	if(othello_board[x_iter-1][y_iter+1] == color){
-		final_returned += nb_returned;
+	if ((x_iter-1 >= 0) && (y_iter+1 <= 7)){
+		if(othello_board[x_iter-1][y_iter+1] == color){
+			final_returned += nb_returned;
+		}
 	}
 
 	nb_returned = 0;
@@ -342,20 +364,24 @@ int othello_move_valid(int x, int y, char color){
 		++y_iter;
 		++nb_returned;
 	}
-	if(othello_board[x_iter+1][y_iter+1] == color){
-		final_returned += nb_returned;
+	if ((x_iter+1 <= 7) && (y_iter+1 <= 7)){
+		if(othello_board[x_iter+1][y_iter+1] == color){
+			final_returned += nb_returned;
+		}
 	}
 
 	nb_returned = 0;
-	x_iter = x;
-	y_iter = y;
+	x_iter = x; // 3
+	y_iter = y; // 7
 	while((x_iter+1 <= 7) && (y_iter-1 >= 0) && othello_board[x_iter+1][y_iter-1] != color && othello_board[x_iter+1][y_iter-1] != '*'){
 		++x_iter;
 		--y_iter;
 		++nb_returned;
 	}
-	if(othello_board[x_iter+1][y_iter-1] == color){
-		final_returned += nb_returned;
+	if ((x_iter+1 <= 7) && (y_iter-1 >= 0)){
+		if(othello_board[x_iter+1][y_iter-1] == color){
+			final_returned += nb_returned;
+		}
 	}
 	
 	nb_returned = 0;
@@ -366,8 +392,10 @@ int othello_move_valid(int x, int y, char color){
 		--y_iter;
 		++nb_returned;
 	}
-	if(othello_board[x_iter-1][y_iter-1] == color){
-		final_returned += nb_returned;
+	if ((x_iter-1 >= 0) && (y_iter-1 >= 0)){
+		if(othello_board[x_iter-1][y_iter-1] == color){
+			final_returned += nb_returned;
+		}
 	}
 	return final_returned;
 }
