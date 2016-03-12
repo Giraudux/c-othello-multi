@@ -2,14 +2,14 @@
  * \author Alexis Giraudet
  */
 
+#define _BSD_SOURCE
+#define _GNU_SOURCE
+
 #include "othello.h"
 #include "othello-server.h"
 
-#ifdef OTHELLO_WITH_SYSLOG
-#define _BSD_SOURCE
-#endif
-
 #include <arpa/inet.h>
+#include <getopt.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <pthread.h>
@@ -88,43 +88,44 @@ void othello_log(int priority, const char *format, ...) {
   va_list ap;
 
   va_start(ap, format);
-#ifdef OTHELLO_WITH_SYSLOG
-  vsyslog(priority, format, ap);
-#else
+
   pthread_mutex_lock(&othello_server_log_mutex);
-  switch (priority) {
-  case LOG_EMERG:
-    fputs("EMERGENCY ", stdout);
-    break;
-  case LOG_ALERT:
-    fputs("ALERT     ", stdout);
-    break;
-  case LOG_CRIT:
-    fputs("CRITICAL  ", stdout);
-    break;
-  case LOG_ERR:
-    fputs("ERROR     ", stdout);
-    break;
-  case LOG_WARNING:
-    fputs("WARNING   ", stdout);
-    break;
-  case LOG_NOTICE:
-    fputs("NOTICE    ", stdout);
-    break;
-  case LOG_INFO:
-    fputs("INFO      ", stdout);
-    break;
-  case LOG_DEBUG:
-    fputs("DEBUG     ", stdout);
-    break;
-  default:
-    fputs("          ", stdout);
-    break;
+  if (othello_server_daemon) {
+    vsyslog(priority, format, ap);
+  } else {
+    switch (priority) {
+    case LOG_EMERG:
+      fputs("EMERGENCY ", stdout);
+      break;
+    case LOG_ALERT:
+      fputs("ALERT     ", stdout);
+      break;
+    case LOG_CRIT:
+      fputs("CRITICAL  ", stdout);
+      break;
+    case LOG_ERR:
+      fputs("ERROR     ", stdout);
+      break;
+    case LOG_WARNING:
+      fputs("WARNING   ", stdout);
+      break;
+    case LOG_NOTICE:
+      fputs("NOTICE    ", stdout);
+      break;
+    case LOG_INFO:
+      fputs("INFO      ", stdout);
+      break;
+    case LOG_DEBUG:
+      fputs("DEBUG     ", stdout);
+      break;
+    default:
+      fputs("          ", stdout);
+      break;
+    }
+    vprintf(format, ap);
+    putc('\n', stdout);
   }
-  vprintf(format, ap);
-  putc('\n', stdout);
   pthread_mutex_unlock(&othello_server_log_mutex);
-#endif
 }
 
 /**
@@ -854,11 +855,8 @@ int othello_create_socket_stream(unsigned short port) {
 void othello_exit(void) {
   if (othello_server_socket >= 0)
     close(othello_server_socket);
-#ifdef OTHELLO_WITH_SYSLOG
   closelog();
-#else
   pthread_mutex_destroy(&othello_server_log_mutex);
-#endif
 }
 
 /**
@@ -1210,45 +1208,53 @@ void othello_print_help(void) { printf("usage:\n"); }
  *
  */
 int main(int argc, char *argv[]) {
-  char *options = "hp:d";
   othello_player_t *player;
   othello_room_t *room_cursor;
   unsigned short port;
+  int option;
+  char *short_options = "hp:d";
+  struct option long_options[] = {{"help", no_argument, NULL, 'h'},
+                                  {"port", required_argument, NULL, 'p'},
+                                  {"daemon", no_argument, NULL, 'd'},
+                                  {NULL, 0, NULL, 0}};
 
   /* init global */
   /* init socket */
   port = 5000;
-  othello_server_socket = -1;
   othello_server_daemon = false;
 
-  memset(othello_server_rooms, 0, sizeof(othello_server_rooms));
-  memset(othello_server_players, 0, sizeof(othello_server_players));
-
-  /*opterr = 0;
-  while((option = getopt(argc, argv, options)) != -1) {
-    switch(option) {
-      case 'h':
-        othello_print_help();
-        return EXIT_SUCCESS;
-      case 'p': break;
-      case 'd': break;
-      case '?':
-        othello_print_help();
-        return EXIT_FAILURE;
+  while ((option = getopt_long(argc, argv, short_options, long_options,
+                               NULL)) != -1) {
+    switch (option) {
+    case 'h':
+      othello_print_help();
+      return EXIT_SUCCESS;
+    case 'd':
+      othello_server_daemon = true;
+      break;
+    case 'p':
+      if (sscanf(argv[2], "%hu", &port) == 1) {
+        break;
+      }
+    default:
+      othello_print_help();
+      return EXIT_FAILURE;
     }
-  }*/
+  }
 
   if (othello_server_daemon) {
     othello_daemonize();
   }
 
-#ifdef OTHELLO_WITH_SYSLOG
   openlog(NULL, LOG_CONS | LOG_PID, LOG_USER);
-#else
   if (pthread_mutex_init(&othello_server_log_mutex, NULL)) {
     return EXIT_FAILURE;
   }
-#endif
+
+  othello_server_socket = -1;
+
+  memset(othello_server_rooms, 0, sizeof(othello_server_rooms));
+  memset(othello_server_players, 0, sizeof(othello_server_players));
 
   for (room_cursor = othello_server_rooms;
        room_cursor < othello_server_rooms + OTHELLO_NUMBER_OF_ROOMS;
@@ -1258,8 +1264,9 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  if (atexit(othello_exit))
+  if (atexit(othello_exit)) {
     return EXIT_FAILURE;
+  }
 
   /* open socket */
   if ((othello_server_socket = othello_create_socket_stream(port)) < 0) {
