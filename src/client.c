@@ -897,6 +897,7 @@ void* othello_write_thread(void* sock){
 		}
 	}
 	free(usr_input);
+	close(socket_descriptor);
 	(void) pthread_join(thread_read, NULL);
 }
 
