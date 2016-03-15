@@ -25,7 +25,8 @@ enum othello_client_enum_e{
 	OTHELLO_CLIENT_INPUT_PLAY,
 	OTHELLO_CLIENT_INPUT_MESG,
 	OTHELLO_CLIENT_INPUT_AUTO,
-	OTHELLO_CLIENT_INPUT_HELP,	
+	OTHELLO_CLIENT_INPUT_HELP,
+	OTHELLO_CLIENT_INPUT_GIVEUP,	
 	OTHELLO_CLIENT_INPUT_EXIT,
 	OTHELLO_CLIENT_INPUT_FAIL
 };
@@ -45,7 +46,7 @@ othello_client_enum_t othello_read_user_input(char**, size_t*);
 /* send the char* to the server using the socket in paramter */
 void othello_write_mesg(int,char*,size_t);
 /* read the size_t first bytes of a server answer using the socket in paramter */
-void othello_read_mesg(int,char*,size_t);
+ssize_t othello_read_mesg(int,char*,size_t);
 /* shift all char of a char* to the right */
 void othello_shift_array(char*,size_t);
 /* ask user a nickname and return the server status answer */
@@ -57,6 +58,7 @@ void othello_send_not_ready(int);
 void othello_send_move(int, char*, size_t);
 void othello_send_auto_move(int);
 void othello_send_mesg(int, char*, size_t);
+void othello_send_giveup(int);
 void othello_send_exit(int);
 /* display the list of possible moves to the user */
 void othello_display_moves();

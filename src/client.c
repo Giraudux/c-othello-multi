@@ -419,6 +419,13 @@ othello_client_enum_t othello_read_user_input(char** usr_input, size_t* input_le
 
 		stdin_real_len = strlen(stdin_value);
 
+		if(stdin_real_len == 3){
+			if(strncmp(stdin_value, "/ff", 3) == 0){
+				input_len = 0;
+				free(stdin_value);
+				return OTHELLO_CLIENT_INPUT_GIVEUP; }
+		}
+
 		if(stdin_real_len > 4){
 			if(stdin_real_len == 5){
 				if(strncmp(stdin_value, "/list", 5) == 0){
@@ -505,12 +512,12 @@ void othello_write_mesg(int sock_descr,char* mesg,size_t msg_len){
     } 
 }
 
-void othello_read_mesg(int sock, char* buff,size_t bytes_to_read){
-  ssize_t n;
+ssize_t othello_read_mesg(int sock, char* buff,size_t bytes_to_read){
+	ssize_t n;
 	if((n = read(sock, buff, bytes_to_read)) != bytes_to_read){
-		printf("Error : Can't read the server answer!\n");
-		
+		printf("Error : Can't read the server answer!\n");	
 	}
+	return n;
 }
 
 void othello_shift_array(char* arr,size_t arr_size){
@@ -639,6 +646,16 @@ void othello_send_mesg(int socket_descriptor, char* usr_inpt, size_t inpt_len){
 		}
 	}else{
 		printf("You can't send a message now:\n");
+	}
+}
+
+void othello_send_giveup(int socket_descriptor){
+	char user_input = OTHELLO_QUERY_GIVEUP;	
+	if (client_state == OTHELLO_CLIENT_STATE_PLAYING){
+		othello_write_mesg(socket_descriptor, &user_input, sizeof user_input);
+		client_state = OTHELLO_CLIENT_STATE_WAITING;
+	}else{
+		printf("you can't send forfeit now!\n");
 	}
 }
 
@@ -897,15 +914,13 @@ void* othello_write_thread(void* sock){
 		}
 	}
 	free(usr_input);
-	close(socket_descriptor);
 	(void) pthread_join(thread_read, NULL);
 }
 
 void* othello_read_thread(void* sock){
 	int socket_descriptor = *((int*)sock);
 	char server_answer_type;
-	for(;;){
-		othello_read_mesg(socket_descriptor, &server_answer_type, 1);
+	while(othello_read_mesg(socket_descriptor, &server_answer_type, 1) > 0){
 		switch(server_answer_type){
 			case OTHELLO_QUERY_LOGIN:
 				othello_server_connect(socket_descriptor);
