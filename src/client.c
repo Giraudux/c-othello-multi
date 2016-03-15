@@ -899,6 +899,9 @@ void* othello_write_thread(void* sock){
 				case OTHELLO_CLIENT_INPUT_PLAY:
 					othello_send_move(socket_descriptor, usr_input, input_len);
 				break;
+				case OTHELLO_CLIENT_INPUT_GIVEUP:
+					othello_send_giveup(socket_descriptor);
+				break;
 				case OTHELLO_CLIENT_INPUT_MESG:
 					othello_send_mesg(socket_descriptor, usr_input, input_len);
 				break;
