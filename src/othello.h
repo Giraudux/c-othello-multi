@@ -24,7 +24,7 @@ enum othello_query_e {
   OTHELLO_QUERY_READY,
   OTHELLO_QUERY_NOT_READY,
   OTHELLO_QUERY_PLAY,
-  OTHELLO_QUERY_ABANDON,
+  OTHELLO_QUERY_GIVEUP,
 
   OTHELLO_NOTIF_ROOM_JOIN,
   OTHELLO_NOTIF_ROOM_LEAVE,
@@ -35,7 +35,7 @@ enum othello_query_e {
   OTHELLO_NOTIF_YOUR_TURN,
   OTHELLO_NOTIF_GAME_START,
   OTHELLO_NOTIF_GAME_END,
-  OTHELLO_NOTIF_ABANDON
+  OTHELLO_NOTIF_GIVEUP
 };
 
 enum othello_state_e {
@@ -56,7 +56,6 @@ enum othello_status_e {
 };
 
 typedef enum othello_query_e othello_query_t;
-/*typedef enum othello_notif_e othello_notif_t;*/
 typedef enum othello_state_e othello_state_t;
 typedef enum othello_status_e othello_status_t;
 

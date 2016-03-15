@@ -24,7 +24,8 @@ enum othello_client_enum_e{
 	OTHELLO_CLIENT_INPUT_NOT_READY,
 	OTHELLO_CLIENT_INPUT_PLAY,
 	OTHELLO_CLIENT_INPUT_MESG,
-	OTHELLO_CLIENT_INPUT_AUTO,	
+	OTHELLO_CLIENT_INPUT_AUTO,
+	OTHELLO_CLIENT_INPUT_HELP,	
 	OTHELLO_CLIENT_INPUT_EXIT,
 	OTHELLO_CLIENT_INPUT_FAIL
 };
@@ -56,14 +57,17 @@ void othello_send_not_ready(int);
 void othello_send_move(int, char*, size_t);
 void othello_send_auto_move(int);
 void othello_send_mesg(int, char*, size_t);
+void othello_send_exit(int);
 /* display the list of possible moves to the user */
 void othello_display_moves();
+void othello_display_help();
 void othello_calc_best_move(int*, int*);
 
 void othello_server_message(int);
 void othello_server_ready(int);
 void othello_server_not_ready(int);
 void othello_server_play(int);
+void othello_server_giveup(int);
 void othello_notif_room_join(int);
 void othello_notif_room_leave(int);
 void othello_notif_mesg(int);
@@ -72,6 +76,7 @@ void othello_notif_not_ready(int);
 void othello_notif_play(int,char);
 void othello_notif_your_turn(int);
 void othello_notif_start(int);
+void othello_notif_giveup(int);
 void othello_notif_end(int);
 /* read all users input until he enter exit and execute the corresponding function according to his state */
 void* othello_write_thread(void*);
