@@ -6,6 +6,11 @@ CFLAGS = -ansi -pedantic -Wall
 CPPFLAGS = -D _REENTRANT
 LDLIBS = -lpthread
 
-all: othello-server
+all: othello-client othello-server
 
-othello-server: othello-client.c othello-server.c
+othello-client: othello-client.c
+
+othello-server: othello-server.c
+
+clean:
+	-rm othello-client othello-server

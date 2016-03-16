@@ -2,6 +2,12 @@
 Client a lancer apres le serveur avec la commande :
 client <adresse-serveur> <message-a-transmettre>
 ------------------------------------------------------------*/
+
+#define _GNU_SOURCE
+
+#include "othello.h"
+#include "othello-client.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <linux/types.h>
@@ -9,10 +15,10 @@ client <adresse-serveur> <message-a-transmettre>
 #include <netdb.h>
 #include <string.h>
 #include <time.h>
-
 #include <stdbool.h>
-#include "othello.h"
-#include "othello-client.h"
+#include <pthread.h>
+#include <strings.h>
+#include <unistd.h>
 
 #define OTHELLO_DEFAULT_SERVER_ADRESS "78.226.157.77"
 
@@ -26,7 +32,7 @@ int main(int argc, char **argv) {
     int socket_descriptor; /* socket descriptor */
 	sockaddr_in adresse_locale; /* socket local adress */
     hostent* ptr_host; /* host machine informations */
-    //servent* ptr_service; /* service informations */
+    /*servent* ptr_service;*/ /* service informations */
 
 	pthread_t thread_write; 
 	printf("Welcome, pls type /connect xxx.xxx.xxx.xxx (server_adress) :\n");
@@ -34,19 +40,19 @@ int main(int argc, char **argv) {
 		printf("Impossible to find a server at this adress, please try again :\n");
 	}
   	client_state = OTHELLO_CLIENT_STATE_NICKNAME;
-    // copy char by char of informations from ptr_host to adresse_locale
+    /* copy char by char of informations from ptr_host to adresse_locale */
     bcopy((char*)ptr_host->h_addr, (char*)&adresse_locale.sin_addr, ptr_host->h_length);
-    adresse_locale.sin_family = AF_INET; // ou ptr_host->h_addrtype;
+    adresse_locale.sin_family = AF_INET; /* ou ptr_host->h_addrtype; */
 
 	adresse_locale.sin_port = htons(5000);
 
- 	//socket creation
+ 	/*socket creation*/
     if ((socket_descriptor = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 		perror("erreur : impossible de creer la socket de connexion avec le serveur.\n");
 		exit(1);
     }
 
-	//server connection try with informations onto adresse_locale
+	/*server connection try with informations onto adresse_locale*/
     if ((connect(socket_descriptor, (sockaddr*)(&adresse_locale), sizeof(adresse_locale))) < 0) {
 		perror("erreur : impossible de se connecter au serveur.\n");
 		exit(1);
@@ -55,7 +61,7 @@ int main(int argc, char **argv) {
 	printf("connexion succed ! \n");
 
 	if(pthread_create(&thread_write, NULL, othello_write_thread, &socket_descriptor)) {
-		//othello_log(LOG_ERR, "pthread_create");
+		/*othello_log(LOG_ERR, "pthread_create");*/
 		return EXIT_FAILURE;
     }
 
@@ -291,8 +297,8 @@ int othello_move_valid(int x, int y, char color){
 	nb_returned = 0;
 	final_returned = 0;
 
-	x_iter = x; // 6
-	y_iter = y; // 7
+	x_iter = x; /* 6 */
+	y_iter = y; /* 7 */
 	while((x_iter-1 >= 0) && othello_board[x_iter-1][y_iter] != color && othello_board[x_iter-1][y_iter] != '*'){
 		--x_iter;
 		++nb_returned;
@@ -371,8 +377,8 @@ int othello_move_valid(int x, int y, char color){
 	}
 
 	nb_returned = 0;
-	x_iter = x; // 3
-	y_iter = y; // 7
+	x_iter = x; /* 3 */
+	y_iter = y; /* 7 */
 	while((x_iter+1 <= 7) && (y_iter-1 >= 0) && othello_board[x_iter+1][y_iter-1] != color && othello_board[x_iter+1][y_iter-1] != '*'){
 		++x_iter;
 		--y_iter;
@@ -415,7 +421,7 @@ othello_client_enum_t othello_read_user_input(char** usr_input, size_t* input_le
 		printf("Input readind failed ... \n");
 	}else{
 		clear_cr = stdin_value;
-		while(*clear_cr != '\n'){ clear_cr += 1; } *clear_cr = '\0'; // remove '\n' from buffer
+		while(*clear_cr != '\n'){ clear_cr += 1; } *clear_cr = '\0'; /* remove '\n' from buffer */
 
 		stdin_real_len = strlen(stdin_value);
 
@@ -607,8 +613,8 @@ void othello_send_move(int socket_descriptor, char* usr_inpt, size_t inpt_len){
 			if( ((int)usr_inpt[1] < 65) || ((int)usr_inpt[1] > 72) ||  ((int)usr_inpt[2] < 49) || ((int)usr_inpt[2] > 56) ){
 				printf("The move coordinates are out of board, please try again : \n");
 			}else{
-				user_input[1] = (int)usr_inpt[1] - 65; // A -> 0, B -> 1, C -> 2 etc ...
-				user_input[2] = (int)usr_inpt[2] - 49;  // 1 -> 0, 2 -> 1, 3 -> 2 etc ...
+				user_input[1] = (int)usr_inpt[1] - 65; /* A -> 0, B -> 1, C -> 2 etc ... */
+				user_input[2] = (int)usr_inpt[2] - 49; /* 1 -> 0, 2 -> 1, 3 -> 2 etc ... */
 				user_input[0] = OTHELLO_QUERY_PLAY;
 				othello_write_mesg(socket_descriptor,user_input,sizeof user_input);
 				client_state == OTHELLO_CLIENT_STATE_WAITING;

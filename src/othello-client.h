@@ -1,6 +1,9 @@
 #ifndef OTHELLO_CLIENT_H
 #define OTHELLO_CLIENT_H
 
+#include <stdbool.h>
+#include <sys/types.h>
+
 typedef struct sockaddr 	sockaddr;
 typedef struct sockaddr_in 	sockaddr_in;
 typedef struct hostent 		hostent;
