@@ -8,4 +8,4 @@ LDLIBS = -lpthread
 
 all: othello-server
 
-othello-server: othello-server.c
+othello-server: othello-client.c othello-server.c
