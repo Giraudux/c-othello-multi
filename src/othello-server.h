@@ -25,7 +25,7 @@ void othello_print_help(void);
 void *othello_player_start(void *player);
 void othello_player_end(othello_player_t *player);
 
-othello_status_t othello_handle_connect(othello_player_t *player);
+othello_status_t othello_handle_login(othello_player_t *player);
 othello_status_t othello_handle_room_list(othello_player_t *player);
 othello_status_t othello_handle_room_join(othello_player_t *player);
 othello_status_t othello_handle_room_leave(othello_player_t *player);
@@ -33,6 +33,7 @@ othello_status_t othello_handle_message(othello_player_t *player);
 othello_status_t othello_handle_ready(othello_player_t *player);
 othello_status_t othello_handle_not_ready(othello_player_t *player);
 othello_status_t othello_handle_play(othello_player_t *player);
+othello_status_t othello_handle_give_up(othello_player_t *player);
 
 int othello_game_score(othello_player_t *player);
 bool othello_game_able_to_play(othello_player_t *player);
