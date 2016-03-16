@@ -138,7 +138,7 @@ void othello_player_end(othello_player_t *player) {
   othello_log(LOG_INFO, "%p end", player);
 
   if (player->state == OTHELLO_STATE_IN_GAME) {
-    notif[0] = OTHELLO_NOTIF_GIVEUP;
+    notif[0] = OTHELLO_NOTIF_GIVE_UP;
     memcpy(notif + 1, player->name, sizeof(player->name));
 
     pthread_mutex_lock(&(player->room->mutex));
@@ -774,10 +774,10 @@ othello_status_t othello_handle_give_up(othello_player_t *player) {
 
   status = OTHELLO_SUCCESS;
 
-  reply[0] = OTHELLO_QUERY_GIVEUP;
+  reply[0] = OTHELLO_QUERY_GIVE_UP;
   reply[1] = OTHELLO_FAILURE;
 
-  notif[0] = OTHELLO_NOTIF_GIVEUP;
+  notif[0] = OTHELLO_NOTIF_GIVE_UP;
 
   if (player->state == OTHELLO_STATE_IN_GAME) {
     reply[1] = OTHELLO_SUCCESS;
@@ -849,7 +849,7 @@ void *othello_player_start(void *arg) {
     case OTHELLO_QUERY_PLAY:
       status = othello_handle_play(player);
       break;
-    case OTHELLO_QUERY_GIVEUP:
+    case OTHELLO_QUERY_GIVE_UP:
       status = othello_handle_give_up(player);
       break;
     case OTHELLO_QUERY_LOGOFF:;

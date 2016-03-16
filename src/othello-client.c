@@ -656,7 +656,7 @@ void othello_send_mesg(int socket_descriptor, char* usr_inpt, size_t inpt_len){
 }
 
 void othello_send_giveup(int socket_descriptor){
-	char user_input = OTHELLO_QUERY_GIVEUP;	
+	char user_input = OTHELLO_QUERY_GIVE_UP;	
 	if (client_state == OTHELLO_CLIENT_STATE_PLAYING){
 		othello_write_mesg(socket_descriptor, &user_input, sizeof user_input);
 		client_state = OTHELLO_CLIENT_STATE_WAITING;
@@ -954,7 +954,7 @@ void* othello_read_thread(void* sock){
 			case OTHELLO_QUERY_PLAY:
 				othello_server_play(socket_descriptor);
 			break;
-			case OTHELLO_QUERY_GIVEUP:
+			case OTHELLO_QUERY_GIVE_UP:
 				othello_server_giveup(socket_descriptor);
 			break;
 
@@ -984,7 +984,7 @@ void* othello_read_thread(void* sock){
 			case OTHELLO_NOTIF_GAME_START:
 				othello_notif_start(socket_descriptor);
 			break;
-			case OTHELLO_NOTIF_GIVEUP:
+			case OTHELLO_NOTIF_GIVE_UP:
 				othello_notif_giveup(socket_descriptor);
 			break;
 			case OTHELLO_NOTIF_GAME_END:
