@@ -26,8 +26,8 @@ othello_client_enum_t client_state;
 char othello_board[OTHELLO_BOARD_LENGTH][OTHELLO_BOARD_LENGTH];
 char my_color;
 char opponent_color;
-char xMove;
-char yMove;
+unsigned char xMove;
+unsigned char yMove;
 bool auto_mode;
 
 
@@ -83,9 +83,9 @@ bool othello_is_number(char* str){
 }
 
 void othello_place_token(int socket_descriptor, char color){
-	printf("New token added to the board in : (%c : %d)\n", (unsigned char)xMove, (unsigned char)yMove);
-	othello_board[(unsigned char)xMove][(unsigned char)yMove] = color;
-	othello_return_tokens((unsigned char)(xMove), (unsigned char)(yMove), color);
+	printf("New token added to the board in : (%c : %c)\n", xMove, yMove);
+	othello_board[xMove][yMove] = color;
+	othello_return_tokens(xMove, yMove, color);
 }
 
 
@@ -605,6 +605,8 @@ void othello_send_auto_move(int socket_descriptor){
 	user_input[0] = OTHELLO_QUERY_PLAY;
 	user_input[1] = i;
 	user_input[2] = j;
+	xMove = i;
+	xMove = j;
 	printf("COMPUTER CHOOSED ( %d / %d ) MOVE !!\n",i,j);
 	othello_write_mesg(socket_descriptor, user_input, sizeof user_input);
 }
