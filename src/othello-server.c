@@ -593,33 +593,13 @@ othello_status_t othello_handle_not_ready(othello_player_t *player) {
   return status;
 }
 
-/*TODO: remove*/
-void print_grid(othello_player_t *player) {
-  int i, j;
-
-  for (i = 0; i < OTHELLO_BOARD_LENGTH; i++) {
-    for (j = 0; j < OTHELLO_BOARD_LENGTH; j++) {
-      if (player->room->grid[i][j] == player) {
-        putc('x', stdout);
-      } else if (player->room->grid[i][j] == NULL) {
-        putc('*', stdout);
-      } else {
-        putc('o', stdout);
-      }
-      putc(' ', stdout);
-    }
-    putc('\n', stdout);
-  }
-  putc('\n', stdout);
-}
-
 /**
  *
  */
 othello_status_t othello_handle_play(othello_player_t *player) {
   othello_status_t status;
   unsigned char stroke[2];
-  char reply[2 + 2]; /*TODO: fix me*/
+  char reply[2];
   char notif_play[3];
   char notif_end[2];
   char notif_your_turn[1];
@@ -645,8 +625,6 @@ othello_status_t othello_handle_play(othello_player_t *player) {
     status = OTHELLO_FAILURE;
   }
 
-  memcpy(reply + 2, stroke, sizeof(stroke)); /*TODO: fix me*/
-
   if (status == OTHELLO_SUCCESS && player->state == OTHELLO_STATE_IN_GAME &&
       player->ready) {
 
@@ -657,8 +635,6 @@ othello_status_t othello_handle_play(othello_player_t *player) {
       othello_log(LOG_INFO, "%p play stroke is invalid", player);
     }
 
-    print_grid(player); /*TODO: remove*/
-
     pthread_mutex_lock(&(player->room->mutex));
     if (othello_game_play_stroke(player, stroke[0], stroke[1]) ==
         OTHELLO_SUCCESS) {
@@ -666,8 +642,6 @@ othello_status_t othello_handle_play(othello_player_t *player) {
       player->ready = false;
     }
     pthread_mutex_unlock(&(player->room->mutex));
-
-    print_grid(player); /*TODO: remove*/
 
     pthread_mutex_lock(&(player->mutex));
     if (othello_write_all(player->socket, reply, sizeof(reply)) <= 0) {
@@ -902,7 +876,7 @@ int othello_create_socket_stream(unsigned short port) {
 }
 
 /*
- * TODO: destroy all rooms/players
+ *
  */
 void othello_exit(void) {
   if (othello_server_socket >= 0) {
@@ -1276,7 +1250,7 @@ int main(int argc, char *argv[]) {
 
   /* init global */
   /* init socket */
-  port = 5000;
+  port = OTHELLO_DEFAULT_PORT;
   othello_server_daemon = false;
 
   while ((option = getopt_long(argc, argv, short_options, long_options,
