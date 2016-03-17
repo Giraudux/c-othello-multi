@@ -29,7 +29,7 @@ char my_color;
 char opponent_color;
 unsigned char xMove;
 unsigned char yMove;
-int* server_port = NULL;
+int server_port = OTHELLO_DEFAULT_PORT;
 bool auto_mode;
 
 
@@ -505,11 +505,7 @@ hostent* othello_ask_server_adress(){
 			++iterator;	
 		}
 		if(*iterator == ':'){
-			if((server_port = malloc(sizeof(int))) == NULL ){
-				printf("Error allocating server port!\n");
-				exit(1);
-			}
-			*server_port = atoi(iterator + 1);
+			server_port = atoi(iterator + 1);
 			*iterator = '\0';
 		}		
 		return gethostbyname(user_input);
@@ -1004,13 +1000,8 @@ int main(int argc, char **argv) {
     bcopy((char*)ptr_host->h_addr, (char*)&adresse_locale.sin_addr, ptr_host->h_length);
     adresse_locale.sin_family = AF_INET; /* ou ptr_host->h_addrtype; */
 
-	if(server_port == NULL){
-		adresse_locale.sin_port = htons(OTHELLO_DEFAULT_PORT);
-	}else{
-		adresse_locale.sin_port = htons(*server_port);
-		free(server_port);
-	}
-
+	adresse_locale.sin_port = htons(server_port);
+	
  	/*socket creation*/
     if ((socket_descriptor = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 		perror("erreur : impossible de creer la socket de connexion avec le serveur.\n");
