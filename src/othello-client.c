@@ -21,6 +21,7 @@ client <adresse-serveur> <message-a-transmettre>
 #include <unistd.h>
 
 #define OTHELLO_DEFAULT_SERVER_ADRESS "78.226.157.77"
+#define OTHELLO_DEFAULT_PORT 5000
 
 othello_client_enum_t client_state;
 char othello_board[OTHELLO_BOARD_LENGTH][OTHELLO_BOARD_LENGTH];
@@ -28,6 +29,7 @@ char my_color;
 char opponent_color;
 unsigned char xMove;
 unsigned char yMove;
+int* server_port = NULL;
 bool auto_mode;
 
 
@@ -83,7 +85,7 @@ bool othello_is_number(char* str){
 }
 
 void othello_place_token(int socket_descriptor, char color){
-	printf("New token added to the board in : (%c : %c)\n", xMove, yMove);
+	printf("New token added to the board in : (%c : %d)\n", (char)(xMove+65), yMove);
 	othello_board[xMove][yMove] = color;
 	othello_return_tokens(xMove, yMove, color);
 }
@@ -490,6 +492,7 @@ void othello_display_help(){
 
 hostent* othello_ask_server_adress(){
 	char* user_input = NULL;
+	char* iterator;
 	size_t input_len;
 	othello_client_enum_t test_con;
 	
@@ -497,6 +500,18 @@ hostent* othello_ask_server_adress(){
 
 
 	if(test_con == OTHELLO_CLIENT_INPUT_CONNECT){
+		iterator = user_input;
+		while(*iterator != '\0' && *iterator != ':'){
+			++iterator;	
+		}
+		if(*iterator == ':'){
+			if((server_port = malloc(sizeof(int))) == NULL ){
+				printf("Error allocating server port!\n");
+				exit(1);
+			}
+			*server_port = atoi(iterator + 1);
+			*iterator = '\0';
+		}		
 		return gethostbyname(user_input);
 	}
 
@@ -606,8 +621,8 @@ void othello_send_auto_move(int socket_descriptor){
 	user_input[1] = i;
 	user_input[2] = j;
 	xMove = i;
-	xMove = j;
-	printf("COMPUTER CHOOSED ( %d / %d ) MOVE !!\n",i,j);
+	yMove = j;
+	printf("COMPUTER CHOOSED ( %c / %d ) MOVE !!\n",(char)(i+65),j+1);
 	othello_write_mesg(socket_descriptor, user_input, sizeof user_input);
 }
 
@@ -829,7 +844,7 @@ void othello_notif_end(int socket_descriptor){
 	}else{
 		printf("Game ended, you lost!\n");
 	}
-	client_state = OTHELLO_CLIENT_STATE_CONNECTED;
+	client_state = OTHELLO_CLIENT_STATE_INROOM;
 }
 
 /************************************/
@@ -989,7 +1004,12 @@ int main(int argc, char **argv) {
     bcopy((char*)ptr_host->h_addr, (char*)&adresse_locale.sin_addr, ptr_host->h_length);
     adresse_locale.sin_family = AF_INET; /* ou ptr_host->h_addrtype; */
 
-	adresse_locale.sin_port = htons(5000);
+	if(server_port == NULL){
+		adresse_locale.sin_port = htons(5000);
+	}else{
+		adresse_locale.sin_port = htons(*server_port);
+		free(server_port);
+	}
 
  	/*socket creation*/
     if ((socket_descriptor = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
