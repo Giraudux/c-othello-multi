@@ -26,71 +26,14 @@ othello_client_enum_t client_state;
 char othello_board[OTHELLO_BOARD_LENGTH][OTHELLO_BOARD_LENGTH];
 char my_color;
 char opponent_color;
+char xMove;
+char yMove;
 bool auto_mode;
 
-int main(int argc, char **argv) {
-    int socket_descriptor; /* socket descriptor */
-	sockaddr_in adresse_locale; /* socket local adress */
-    hostent* ptr_host; /* host machine informations */
-    /*servent* ptr_service;*/ /* service informations */
 
-	pthread_t thread_write; 
-	printf("Welcome, pls type /connect xxx.xxx.xxx.xxx (server_adress) :\n");
-	while((ptr_host = othello_ask_server_adress()) == NULL){
-		printf("Impossible to find a server at this adress, please try again :\n");
-	}
-  	client_state = OTHELLO_CLIENT_STATE_NICKNAME;
-    /* copy char by char of informations from ptr_host to adresse_locale */
-    bcopy((char*)ptr_host->h_addr, (char*)&adresse_locale.sin_addr, ptr_host->h_length);
-    adresse_locale.sin_family = AF_INET; /* ou ptr_host->h_addrtype; */
-
-	adresse_locale.sin_port = htons(5000);
-
- 	/*socket creation*/
-    if ((socket_descriptor = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("erreur : impossible de creer la socket de connexion avec le serveur.\n");
-		exit(1);
-    }
-
-	/*server connection try with informations onto adresse_locale*/
-    if ((connect(socket_descriptor, (sockaddr*)(&adresse_locale), sizeof(adresse_locale))) < 0) {
-		perror("erreur : impossible de se connecter au serveur.\n");
-		exit(1);
-    }
-	
-	printf("connexion succed ! \n");
-
-	if(pthread_create(&thread_write, NULL, othello_write_thread, &socket_descriptor)) {
-		/*othello_log(LOG_ERR, "pthread_create");*/
-		return EXIT_FAILURE;
-    }
-
-	(void) pthread_join(thread_write, NULL);
-	close(socket_descriptor);
-
-	printf("Thanks for playing, see you soon!\n");
-	return 0;
-}
-
-hostent* othello_ask_server_adress(){
-	char* user_input = NULL;
-	size_t input_len;
-	othello_client_enum_t test_con;
-	
-	test_con = othello_read_user_input(&user_input, &input_len);
-
-
-	if(test_con == OTHELLO_CLIENT_INPUT_CONNECT){
-		return gethostbyname(user_input);
-	}
-
-	if(test_con == OTHELLO_CLIENT_INPUT_CONNECT_DEFAULT){
-		return gethostbyname(OTHELLO_DEFAULT_SERVER_ADRESS);
-	}
-	
-	printf("Bad input, please try again ...\n");
-	return NULL;
-}
+/************************************/
+/********* TABLE FUNCTIONS **********/
+/************************************/
 
 void othello_init_board(){
 	int i,j;
@@ -139,35 +82,12 @@ bool othello_is_number(char* str){
 	return true;
 }
 
-void othello_display_moves(){
-	int i,j = 0;
-	printf("Possible moves : \n");
-	for (i = 0; i < OTHELLO_BOARD_LENGTH; ++i){
-		for(j = 0; j < OTHELLO_BOARD_LENGTH; ++j){
-			if(othello_move_valid(i,j,my_color) > 0){
-				printf("(%c;%d) ",(char)(i + 65),j+1);
-			}
-		}
-	}
-	printf("\n");
+void othello_place_token(int socket_descriptor, char color){
+	printf("New token added to the board in : (%c : %d)\n", (unsigned char)xMove, (unsigned char)yMove);
+	othello_board[(unsigned char)xMove][(unsigned char)yMove] = color;
+	othello_return_tokens((unsigned char)(xMove), (unsigned char)(yMove), color);
 }
 
-void othello_calc_best_move(int* x_pos, int* y_pos){
-	int i,j;
-	int returned = 0;
-	int max_returned = 0;
-	for (i = 0; i < OTHELLO_BOARD_LENGTH; ++i){
-		for(j = 0; j < OTHELLO_BOARD_LENGTH; ++j){
-			if((returned = othello_move_valid(i,j,my_color)) > 0){
-				if(returned > max_returned){
-					*x_pos = i;
-					*y_pos = j;
-				}
-			}
-		}
-	}
-	printf("\n");
-}
 
 void othello_return_tokens(int x, int y, char color){
 	int x_iter,y_iter;
@@ -406,6 +326,40 @@ int othello_move_valid(int x, int y, char color){
 	return final_returned;
 }
 
+void othello_display_moves(){
+	int i,j = 0;
+	printf("Possible moves : \n");
+	for (i = 0; i < OTHELLO_BOARD_LENGTH; ++i){
+		for(j = 0; j < OTHELLO_BOARD_LENGTH; ++j){
+			if(othello_move_valid(i,j,my_color) > 0){
+				printf("(%c;%d) ",(char)(i + 65),j+1);
+			}
+		}
+	}
+	printf("\n");
+}
+
+void othello_calc_best_move(int* x_pos, int* y_pos){
+	int i,j;
+	int returned = 0;
+	int max_returned = 0;
+	for (i = 0; i < OTHELLO_BOARD_LENGTH; ++i){
+		for(j = 0; j < OTHELLO_BOARD_LENGTH; ++j){
+			if((returned = othello_move_valid(i,j,my_color)) > 0){
+				if(returned > max_returned){
+					*x_pos = i;
+					*y_pos = j;
+				}
+			}
+		}
+	}
+	printf("\n");
+}
+
+/************************************/
+/***** INPUT/OUTPUT FUNCTIONS *******/
+/************************************/
+
 othello_client_enum_t othello_read_user_input(char** usr_input, size_t* input_len){
 	char* stdin_value;
 	char* clear_cr;
@@ -526,18 +480,32 @@ ssize_t othello_read_mesg(int sock, char* buff,size_t bytes_to_read){
 	return n;
 }
 
-void othello_shift_array(char* arr,size_t arr_size){
-	char* mover;
-	mover = arr + strlen(arr);
-	if(strlen(arr) < arr_size-1){
-		*(mover+1) = '\0';
-	}else{
-		--mover;
+void othello_display_help(){
+	printf("HELP IS HERE !\n");
+}
+
+/************************************/
+/**** SERVER REQUEST FUNCTIONS ******/
+/************************************/
+
+hostent* othello_ask_server_adress(){
+	char* user_input = NULL;
+	size_t input_len;
+	othello_client_enum_t test_con;
+	
+	test_con = othello_read_user_input(&user_input, &input_len);
+
+
+	if(test_con == OTHELLO_CLIENT_INPUT_CONNECT){
+		return gethostbyname(user_input);
 	}
-	while(mover!=arr){
-		*mover = *(mover-1);
-		--mover;
+
+	if(test_con == OTHELLO_CLIENT_INPUT_CONNECT_DEFAULT){
+		return gethostbyname(OTHELLO_DEFAULT_SERVER_ADRESS);
 	}
+	
+	printf("Bad input, please try again ...\n");
+	return NULL;
 }
 
 void othello_choose_nickname(int socket_descriptor, char* usr_inpt, size_t inpt_len){
@@ -555,6 +523,7 @@ void othello_choose_nickname(int socket_descriptor, char* usr_inpt, size_t inpt_
 		printf("You can't choose a nickname now!\n");
 	}
 }
+
 
 void othello_ask_list(int socket_descriptor){
 	char user_input = OTHELLO_QUERY_ROOM_LIST;
@@ -613,11 +582,13 @@ void othello_send_move(int socket_descriptor, char* usr_inpt, size_t inpt_len){
 			if( ((int)usr_inpt[1] < 65) || ((int)usr_inpt[1] > 72) ||  ((int)usr_inpt[2] < 49) || ((int)usr_inpt[2] > 56) ){
 				printf("The move coordinates are out of board, please try again : \n");
 			}else{
+				user_input[0] = OTHELLO_QUERY_PLAY;
 				user_input[1] = (int)usr_inpt[1] - 65; /* A -> 0, B -> 1, C -> 2 etc ... */
 				user_input[2] = (int)usr_inpt[2] - 49; /* 1 -> 0, 2 -> 1, 3 -> 2 etc ... */
-				user_input[0] = OTHELLO_QUERY_PLAY;
+				xMove = user_input[1];
+				yMove = user_input[2];
 				othello_write_mesg(socket_descriptor,user_input,sizeof user_input);
-				client_state == OTHELLO_CLIENT_STATE_WAITING;
+				client_state = OTHELLO_CLIENT_STATE_WAITING;
 			}
 		}else{
 			printf("Then entered move is in invalid format!\n");
@@ -671,9 +642,9 @@ void othello_send_exit(socket_descriptor){
 	client_state = OTHELLO_CLIENT_STATE_EXIT;
 }
 
-void othello_display_help(){
-	printf("HELP IS HERE !\n");
-}
+/************************************/
+/***** SERVER ANSWER FUNCTIONS ******/
+/************************************/
 
 void othello_server_connect(int socket_descriptor){
 	char server_answer;
@@ -746,14 +717,12 @@ void othello_server_not_ready(int socket_descriptor){
 
 void othello_server_play(int socket_descriptor){
 	char server_answer;
-	char empty_buff[2];
 	othello_read_mesg(socket_descriptor,&server_answer,sizeof(server_answer));
 	if(server_answer == OTHELLO_SUCCESS){
 		client_state = OTHELLO_CLIENT_STATE_WAITING;
 		printf("Votre coup a ete valide\n");
-		othello_place_token(socket_descriptor,my_color);
+		othello_place_token(socket_descriptor, my_color);
 	}else{
-		othello_read_mesg(socket_descriptor, empty_buff, sizeof(empty_buff));
 		client_state = OTHELLO_CLIENT_STATE_PLAYING;
 		printf("Votre coup est invalide ...\nEnter a new one!\n");
 	}
@@ -804,17 +773,12 @@ void othello_notif_not_ready(int socket_descriptor){
 }
 
 void othello_notif_play(int socket_descriptor, char color){
+	char server_answer[2];	
 	printf("Opponent just played!\n");
-	othello_display_board();
-	othello_place_token(socket_descriptor,color);
-}
-
-void othello_place_token(int socket_descriptor, char color){
-	char server_answer[2];
 	othello_read_mesg(socket_descriptor,server_answer,sizeof(server_answer));
-	printf("New token added to the board in : (%d : %d)\n", server_answer[0], server_answer[1]);
-	othello_board[(unsigned char)server_answer[0]][(unsigned char)server_answer[1]] = color;
-	othello_return_tokens((unsigned char)(server_answer[0]), (unsigned char)(server_answer[1]), color);
+	xMove = server_answer[0];
+	yMove = server_answer[1];
+	othello_place_token(socket_descriptor,color);
 }
 
 void othello_notif_your_turn(int socket_descriptor){
@@ -866,12 +830,16 @@ void othello_notif_end(int socket_descriptor){
 	client_state = OTHELLO_CLIENT_STATE_CONNECTED;
 }
 
+/************************************/
+/******** THREAD FUNCTIONS **********/
+/************************************/
+
 void* othello_write_thread(void* sock){
 	pthread_t thread_read;	
 	int socket_descriptor = *((int*)sock);
 	char* usr_input = NULL;
 	size_t input_len;
-	othello_client_enum_t input_type;
+	char input_type;
 
 	if(pthread_create(&thread_read, NULL, othello_read_thread, sock)) {
 		exit(1);
@@ -924,6 +892,7 @@ void* othello_write_thread(void* sock){
 	}
 	free(usr_input);
 	(void) pthread_join(thread_read, NULL);
+	return NULL;
 }
 
 void* othello_read_thread(void* sock){
@@ -995,4 +964,53 @@ void* othello_read_thread(void* sock){
 			break;
 		}
 	}
+	return NULL;
+}
+
+/************************************/
+/*************** MAIN ***************/
+/************************************/
+
+int main(int argc, char **argv) {
+    int socket_descriptor; /* socket descriptor */
+	sockaddr_in adresse_locale; /* socket local adress */
+    hostent* ptr_host; /* host machine informations */
+    /*servent* ptr_service;*/ /* service informations */
+
+	pthread_t thread_write; 
+	printf("Welcome, pls type /connect xxx.xxx.xxx.xxx (server_adress) :\n");
+	while((ptr_host = othello_ask_server_adress()) == NULL){
+		printf("Impossible to find a server at this adress, please try again :\n");
+	}
+  	client_state = OTHELLO_CLIENT_STATE_NICKNAME;
+    /* copy char by char of informations from ptr_host to adresse_locale */
+    bcopy((char*)ptr_host->h_addr, (char*)&adresse_locale.sin_addr, ptr_host->h_length);
+    adresse_locale.sin_family = AF_INET; /* ou ptr_host->h_addrtype; */
+
+	adresse_locale.sin_port = htons(5000);
+
+ 	/*socket creation*/
+    if ((socket_descriptor = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+		perror("erreur : impossible de creer la socket de connexion avec le serveur.\n");
+		exit(1);
+    }
+
+	/*server connection try with informations onto adresse_locale*/
+    if ((connect(socket_descriptor, (sockaddr*)(&adresse_locale), sizeof(adresse_locale))) < 0) {
+		perror("erreur : impossible de se connecter au serveur.\n");
+		exit(1);
+    }
+	
+	printf("connexion succed ! \n");
+
+	if(pthread_create(&thread_write, NULL, othello_write_thread, &socket_descriptor)) {
+		/*othello_log(LOG_ERR, "pthread_create");*/
+		return EXIT_FAILURE;
+    }
+
+	(void) pthread_join(thread_write, NULL);
+	close(socket_descriptor);
+
+	printf("Thanks for playing, see you soon!\n");
+	return 0;
 }

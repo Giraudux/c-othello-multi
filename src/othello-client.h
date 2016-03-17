@@ -36,7 +36,9 @@ enum othello_client_enum_e{
 
 typedef enum othello_client_enum_e othello_client_enum_t;
 
-hostent* othello_ask_server_adress();
+/************************************/
+/********* TABLE FUNCTIONS **********/
+/************************************/
 void othello_init_board();
 void othello_display_board();
 /* return if yes or not a char* can be converted into a number */
@@ -44,14 +46,26 @@ bool othello_is_number(char*);
 void othello_return_tokens(int,int,char);
 void othello_place_token(int,char);
 int othello_move_valid(int,int,char);
+/* display the list of possible moves to the user */
+void othello_display_moves();
+void othello_calc_best_move(int*, int*);
+
+/************************************/
+/***** INPUT/OUTPUT FUNCTIONS *******/
+/************************************/
 /* get a user input into the char* in paramter */
 othello_client_enum_t othello_read_user_input(char**, size_t*);
 /* send the char* to the server using the socket in paramter */
 void othello_write_mesg(int,char*,size_t);
 /* read the size_t first bytes of a server answer using the socket in paramter */
 ssize_t othello_read_mesg(int,char*,size_t);
-/* shift all char of a char* to the right */
-void othello_shift_array(char*,size_t);
+
+void othello_display_help();
+
+/************************************/
+/**** SERVER REQUEST FUNCTIONS ******/
+/************************************/
+hostent* othello_ask_server_adress();
 /* ask user a nickname and return the server status answer */
 void othello_choose_nickname(int, char*, size_t);
 void othello_ask_list(int);
@@ -63,16 +77,19 @@ void othello_send_auto_move(int);
 void othello_send_mesg(int, char*, size_t);
 void othello_send_giveup(int);
 void othello_send_exit(int);
-/* display the list of possible moves to the user */
-void othello_display_moves();
-void othello_display_help();
-void othello_calc_best_move(int*, int*);
 
+/************************************/
+/***** SERVER ANSWER FUNCTIONS ******/
+/************************************/
+void othello_server_connect(int);
+void othello_server_room_list(int);
+void othello_server_room_join(int);
 void othello_server_message(int);
 void othello_server_ready(int);
 void othello_server_not_ready(int);
 void othello_server_play(int);
 void othello_server_giveup(int);
+
 void othello_notif_room_join(int);
 void othello_notif_room_leave(int);
 void othello_notif_mesg(int);
@@ -83,10 +100,18 @@ void othello_notif_your_turn(int);
 void othello_notif_start(int);
 void othello_notif_giveup(int);
 void othello_notif_end(int);
+
+/************************************/
+/******** THREAD FUNCTIONS **********/
+/************************************/
 /* read all users input until he enter exit and execute the corresponding function according to his state */
 void* othello_write_thread(void*);
 /* read all server answers */
 void* othello_read_thread(void*);
+
+/************************************/
+/*************** MAIN ***************/
+/************************************/
 
 int main(int argc, char **argv);
 
