@@ -1005,7 +1005,7 @@ int main(int argc, char **argv) {
     adresse_locale.sin_family = AF_INET; /* ou ptr_host->h_addrtype; */
 
 	if(server_port == NULL){
-		adresse_locale.sin_port = htons(5000);
+		adresse_locale.sin_port = htons(OTHELLO_DEFAULT_PORT);
 	}else{
 		adresse_locale.sin_port = htons(*server_port);
 		free(server_port);
