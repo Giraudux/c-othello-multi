@@ -30,7 +30,7 @@ char opponent_color;
 unsigned char xMove;
 unsigned char yMove;
 int server_port = OTHELLO_DEFAULT_PORT;
-bool auto_mode;
+bool auto_mode; /* indicate if yes or not the AI plays insted of you */
 
 
 /************************************/
@@ -42,10 +42,11 @@ void othello_init_board(){
 	auto_mode = false;	
 	for (i = 0; i < OTHELLO_BOARD_LENGTH; ++i){
 		for(j = 0; j < OTHELLO_BOARD_LENGTH; ++j){
-			othello_board[i][j] = '*';
+			othello_board[i][j] = '*'; /* '*' is used as empty cell */
 		}
 	}
-	othello_board[OTHELLO_BOARD_LENGTH/2 - 1][OTHELLO_BOARD_LENGTH/2 - 1] = 'o';
+	/* see othello tules for this setup */
+	othello_board[OTHELLO_BOARD_LENGTH/2 - 1][OTHELLO_BOARD_LENGTH/2 - 1] = 'o'; 
 	othello_board[OTHELLO_BOARD_LENGTH/2 - 1][OTHELLO_BOARD_LENGTH/2] = 'x';
 	othello_board[OTHELLO_BOARD_LENGTH/2][OTHELLO_BOARD_LENGTH/2 - 1] = 'x';
 	othello_board[OTHELLO_BOARD_LENGTH/2][OTHELLO_BOARD_LENGTH/2] = 'o';
@@ -95,6 +96,11 @@ void othello_place_token(int socket_descriptor, char color){
 void othello_return_tokens(int x, int y, char color){
 	int x_iter,y_iter;
 
+	/* for each sides */
+	/* as long as the next token is the opposite color, move on it */
+	/* when it's not, if it's my color, do the same parkour in the opposite direction and change the color of each passed tokens */
+
+	/* check top side */
 	x_iter = x;
 	y_iter = y;
 	while((x_iter-1 >= 0) && othello_board[x_iter-1][y_iter] != color && othello_board[x_iter-1][y_iter] != '*'){
@@ -108,6 +114,7 @@ void othello_return_tokens(int x, int y, char color){
 			}
 		}
 	}
+	/* check right side */
 	x_iter = x;
 	y_iter = y;
 	while((y_iter+1 <= 7) && othello_board[x_iter][y_iter+1] != color && othello_board[x_iter][y_iter+1] != '*'){
@@ -121,6 +128,7 @@ void othello_return_tokens(int x, int y, char color){
 			}
 		}
 	}
+	/* check bottom side */
 	x_iter = x;
 	y_iter = y;
 	while((x_iter+1 <= 7) && othello_board[x_iter+1][y_iter] != color && othello_board[x_iter+1][y_iter] != '*'){
@@ -134,7 +142,7 @@ void othello_return_tokens(int x, int y, char color){
 			}
 		}
 	}
-
+	/* check left side */
 	x_iter = x;
 	y_iter = y;
 	while((y_iter-1 >= 0) && othello_board[x_iter][y_iter-1] != color && othello_board[x_iter][y_iter-1] != '*'){		
@@ -148,7 +156,7 @@ void othello_return_tokens(int x, int y, char color){
 			}
 		}
 	}
-	
+	/* check top right side */
 	x_iter = x;
 	y_iter = y;
 	while((x_iter-1 >= 0) && (y_iter+1 <= 7) && othello_board[x_iter-1][y_iter+1] != color && othello_board[x_iter-1][y_iter+1] != '*'){
@@ -164,6 +172,7 @@ void othello_return_tokens(int x, int y, char color){
 			}
 		}
 	}
+	/* check bottom right side */
 	x_iter = x;
 	y_iter = y;
 	while((x_iter+1 <= 7) && (y_iter+1 <= 7) && othello_board[x_iter+1][y_iter+1] != color && othello_board[x_iter+1][y_iter+1] != '*'){
@@ -179,6 +188,7 @@ void othello_return_tokens(int x, int y, char color){
 			}
 		}
 	}
+	/* check bottom left side */
 	x_iter = x;
 	y_iter = y;
 	while((x_iter+1 <= 7) && (y_iter-1 >= 0) && othello_board[x_iter+1][y_iter-1] != color && othello_board[x_iter+1][y_iter-1] != '*'){
@@ -194,6 +204,7 @@ void othello_return_tokens(int x, int y, char color){
 			}
 		}
 	}
+	/* check top left side */
 	x_iter = x;
 	y_iter = y;
 	while((x_iter-1 >= 0) && (y_iter-1 >= 0) && othello_board[x_iter-1][y_iter-1] != color && othello_board[x_iter-1][y_iter-1] != '*'){
@@ -212,6 +223,8 @@ void othello_return_tokens(int x, int y, char color){
 }
 
 int othello_move_valid(int x, int y, char color){
+	/* same than return token but return true if at least one token is returnable */
+
 	int x_iter,y_iter,nb_returned,final_returned;
 
 	if (othello_board[x][y] != '*')
@@ -483,7 +496,7 @@ void othello_write_mesg(int sock_descr,char* mesg,size_t msg_len){
 ssize_t othello_read_mesg(int sock, char* buff,size_t bytes_to_read){
 	ssize_t n = 0;
 	char *iterator = buff;
-
+	/* n and iterator are here to deal with MTU and read all the packages */
 	while (bytes_to_read > 0 && (n = read(sock, iterator, bytes_to_read)) > 0) {
 		bytes_to_read -= n;
 		iterator += n;
@@ -522,12 +535,12 @@ hostent* othello_ask_server_adress(){
 
 	if(test_con == OTHELLO_CLIENT_INPUT_CONNECT){
 		iterator = user_input;
-		while(*iterator != '\0' && *iterator != ':'){
+		while(*iterator != '\0' && *iterator != ':'){ /* finding ':' or end of string */
 			++iterator;	
 		}
-		if(*iterator == ':'){
+		if(*iterator == ':'){ /* if their is ':', convert the following chars into int */
 			server_port = atoi(iterator + 1);
-			*iterator = '\0';
+			*iterator = '\0'; /* to ignore the port when calling hostbyname */
 		}		
 		return gethostbyname(user_input);
 	}
@@ -577,7 +590,7 @@ void othello_choose_room(int socket_descriptor, char* usr_inpt, size_t inpt_len)
 				othello_write_mesg(socket_descriptor, user_input, sizeof user_input);
 				client_state = OTHELLO_CLIENT_STATE_WAITING;
 			}else{
-				printf("No room ID doesn't exist!\n");
+				printf("Room ID doesn't exist!\n");
 			}
 		}else{
 			printf("No room ID entered!\n");
@@ -629,10 +642,10 @@ void othello_send_move(int socket_descriptor, char* usr_inpt, size_t inpt_len){
 				client_state = OTHELLO_CLIENT_STATE_WAITING;
 			}
 		}else{
-			printf("Then entered move is in an invalid format!\n");
+			printf("The entered move is in an invalid format!\n");
 		}
 	}else{
-		printf("you can't send a move now!\n");
+		printf("You can't send a move now!\n");
 	}
 }
 
@@ -656,6 +669,7 @@ void othello_send_mesg(int socket_descriptor, char* usr_inpt, size_t inpt_len){
 		client_state == OTHELLO_CLIENT_STATE_PLAYING ||
 		client_state == OTHELLO_CLIENT_STATE_WAITING ){
 		if(inpt_len > 1){
+			 /* get rif of chars exeding OTHELLO_MESSAGE_LENGTH */
 			memcpy(user_input, usr_inpt, (inpt_len<(OTHELLO_MESSAGE_LENGTH + 2))?inpt_len:(OTHELLO_MESSAGE_LENGTH + 1));
 			if(inpt_len < (OTHELLO_MESSAGE_LENGTH + 1)){user_input[inpt_len] = '\0';}
 			user_input[0] = OTHELLO_QUERY_MESSAGE;
@@ -712,7 +726,7 @@ void othello_server_room_list(int socket_descriptor){
 	char *p2;
 	size_t p2_size;
 	char server_answer[(2 + OTHELLO_ROOM_LENGTH * OTHELLO_PLAYER_NAME_LENGTH) * OTHELLO_NUMBER_OF_ROOMS];
-	
+	/* first char for room ID, 32 char for p1, 32 char for p2, 1 char for room occupation(ignored here) * nb rooms */
 	empties_size = 0;
 
 	othello_read_mesg(socket_descriptor,server_answer,sizeof(server_answer));
@@ -721,13 +735,17 @@ void othello_server_room_list(int socket_descriptor){
 	
 	iterator = server_answer;
 	for(i = 0; i < OTHELLO_NUMBER_OF_ROOMS; ++i){
-		/*printf("ROOM n° %d : ",*iterator);*/
+
+		/* place the iterator where we want to start reading, place '\0' where the reading should end */
+		/* save the ereased char (by '\0') to put it back after */
+		/* if both player names are empty, stock the id into an int array to display them at the end */
+		/* otherwise, display the room ID with player names into it */
+
 		room_id = *iterator;
 		iterator+=1;
-
+		
 		ereasedVal = *(iterator+32);
 		*(iterator+32) = '\0';
-		/*printf(" %s ",iterator);*/
 		p1 = iterator;
 		p1_size = strlen(p1);
 		*(iterator+32) = ereasedVal;
@@ -735,7 +753,6 @@ void othello_server_room_list(int socket_descriptor){
 		iterator+=32;
 		ereasedVal = *(iterator+32);
 		*(iterator+32) = '\0';
-		/*printf(" %s ",iterator);*/
 		p2 = iterator;
 		p2_size = strlen(p2);
 		*(iterator+32) = ereasedVal;
@@ -760,7 +777,6 @@ void othello_server_room_list(int socket_descriptor){
 			printf("\n");
 		}
 		iterator+=33;
-		/*printf("\n");*/
 	}
 	printf("\nEmpty rooms : ");
 	for(i = 0; i < empties_size; ++i){
