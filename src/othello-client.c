@@ -558,7 +558,7 @@ void othello_choose_nickname(int socket_descriptor, char* usr_inpt, size_t inpt_
 	if (client_state == OTHELLO_CLIENT_STATE_NICKNAME){
 		if(inpt_len > 1){
 			memcpy(user_input+1, usr_inpt, (inpt_len<34)?inpt_len:33);
-			if(inpt_len < 33){user_input[inpt_len] = '\0';}
+			if(inpt_len < 33){user_input[inpt_len+1] = '\0';}
 			user_input[0] = OTHELLO_QUERY_LOGIN;
 			user_input[1] = OTHELLO_PROTOCOL_VERSION;
 			othello_write_mesg(socket_descriptor, user_input, sizeof user_input);
@@ -995,7 +995,7 @@ void* othello_write_thread(void* sock){
 		exit(1);
 	}
 	othello_init_board();
-	printf("You can now enter your nickname :\n");	
+	printf("You can now enter your nickname (/nick ):\n");
 
 	while(client_state != OTHELLO_CLIENT_STATE_EXIT){
 	
