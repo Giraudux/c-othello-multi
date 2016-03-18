@@ -20,7 +20,7 @@ client <adresse-serveur> <message-a-transmettre>
 #include <strings.h>
 #include <unistd.h>
 
-#define OTHELLO_DEFAULT_SERVER_ADRESS "78.226.157.77"
+#define OTHELLO_DEFAULT_SERVER_ADRESS "localhost"
 #define OTHELLO_DEFAULT_PORT 5000
 
 othello_client_enum_t client_state;
@@ -85,9 +85,10 @@ bool othello_is_number(char* str){
 }
 
 void othello_place_token(int socket_descriptor, char color){
-	printf("New token added to the board in : (%c : %d)\n", (char)(xMove+65), yMove);
 	othello_board[xMove][yMove] = color;
 	othello_return_tokens(xMove, yMove, color);
+	printf("New token added to the board in : (%c : %d)\n", (char)(xMove+65), yMove);
+	othello_display_board();
 }
 
 
@@ -437,6 +438,11 @@ othello_client_enum_t othello_read_user_input(char** usr_input, size_t* input_le
 					free(stdin_value);
 					return OTHELLO_CLIENT_INPUT_READY; }
 
+				if(strncmp(stdin_value, "/leave", 6) == 0){
+					input_len = 0;
+					free(stdin_value);
+					return OTHELLO_CLIENT_INPUT_LEAVE; }
+
 				*input_len = stdin_real_len - 5;
 				
 				if((realloc_input = (char*)realloc(*usr_input, (*input_len) * sizeof(char))) == NULL){
@@ -475,15 +481,30 @@ void othello_write_mesg(int sock_descr,char* mesg,size_t msg_len){
 }
 
 ssize_t othello_read_mesg(int sock, char* buff,size_t bytes_to_read){
-	ssize_t n;
-	if((n = read(sock, buff, bytes_to_read)) != bytes_to_read){
-		printf("Error : Can't read the server answer!\n");	
+	ssize_t n = 0;
+	char *iterator = buff;
+
+	while (bytes_to_read > 0 && (n = read(sock, iterator, bytes_to_read)) > 0) {
+		bytes_to_read -= n;
+		iterator += n;
 	}
 	return n;
 }
 
 void othello_display_help(){
-	printf("HELP IS HERE !\n");
+	printf("\n/help -> display the list of commands\n");
+	printf("/connect server_ip[OPTIONAL]:server_port[OPTIONAL] -> connect you to the input adress\n");
+	printf("/nick pseudo -> try to log you into the game with the entered nickname\n");
+	printf("/list -> display the list of rooms and their players\n");
+	printf("/join room_number -> try to join the entered room\n");
+	printf("/ready -> set you in ready state\n");
+	printf("/notready -> set you in unready state\n");
+	printf("/play XY -> play a turn on XY board pos\n");
+	printf("/ff -> surrender (instant loose)\n");
+	printf("/mesg -> send a message to your opponent\n");
+	printf("/leave -> leave the current room\n");
+	printf("/auto -> let the AI play for you\n");
+	printf("/exit -> exit the game\n\n");
 }
 
 /************************************/
@@ -566,6 +587,12 @@ void othello_choose_room(int socket_descriptor, char* usr_inpt, size_t inpt_len)
 	}
 }
 
+void othello_send_room_leave(socket_descriptor){
+	char user_input = OTHELLO_QUERY_ROOM_LEAVE;
+	othello_write_mesg(socket_descriptor, &user_input, sizeof user_input);
+	client_state = OTHELLO_CLIENT_STATE_WAITING;
+}
+
 void othello_send_ready(int socket_descriptor){
 	char user_input = OTHELLO_QUERY_READY;	
 	if (client_state == OTHELLO_CLIENT_STATE_INROOM){
@@ -602,7 +629,7 @@ void othello_send_move(int socket_descriptor, char* usr_inpt, size_t inpt_len){
 				client_state = OTHELLO_CLIENT_STATE_WAITING;
 			}
 		}else{
-			printf("Then entered move is in invalid format!\n");
+			printf("Then entered move is in an invalid format!\n");
 		}
 	}else{
 		printf("you can't send a move now!\n");
@@ -618,7 +645,7 @@ void othello_send_auto_move(int socket_descriptor){
 	user_input[2] = j;
 	xMove = i;
 	yMove = j;
-	printf("COMPUTER CHOOSED ( %c / %d ) MOVE !!\n",(char)(i+65),j+1);
+	printf("computer choosed ( %c / %d ) move for you !!\n",(char)(i+65),j+1);
 	othello_write_mesg(socket_descriptor, user_input, sizeof user_input);
 }
 
@@ -664,6 +691,7 @@ void othello_server_connect(int socket_descriptor){
 	othello_read_mesg(socket_descriptor, &server_answer, sizeof(server_answer));
 	if(server_answer == OTHELLO_SUCCESS){
 		client_state = OTHELLO_CLIENT_STATE_CONNECTED;
+		system("clear");
 		printf("You are now connected to the server\n");
 		printf("You can display the server list with /list or join a room with /join\n");
 	}else{
@@ -673,15 +701,79 @@ void othello_server_connect(int socket_descriptor){
 }
 
 void othello_server_room_list(int socket_descriptor){
+	int i;
+	char ereasedVal;
+	char* iterator;
+	int empties[OTHELLO_NUMBER_OF_ROOMS];
+	size_t empties_size;
+	int room_id;
+	char *p1;
+	size_t p1_size;
+	char *p2;
+	size_t p2_size;
 	char server_answer[(2 + OTHELLO_ROOM_LENGTH * OTHELLO_PLAYER_NAME_LENGTH) * OTHELLO_NUMBER_OF_ROOMS];
+	
+	empties_size = 0;
+
 	othello_read_mesg(socket_descriptor,server_answer,sizeof(server_answer));
-	printf("List of rooms :\n");
+	system("clear");
+	printf("List of rooms :\n\n");
+	
+	iterator = server_answer;
+	for(i = 0; i < OTHELLO_NUMBER_OF_ROOMS; ++i){
+		/*printf("ROOM n° %d : ",*iterator);*/
+		room_id = *iterator;
+		iterator+=1;
+
+		ereasedVal = *(iterator+32);
+		*(iterator+32) = '\0';
+		/*printf(" %s ",iterator);*/
+		p1 = iterator;
+		p1_size = strlen(p1);
+		*(iterator+32) = ereasedVal;
+
+		iterator+=32;
+		ereasedVal = *(iterator+32);
+		*(iterator+32) = '\0';
+		/*printf(" %s ",iterator);*/
+		p2 = iterator;
+		p2_size = strlen(p2);
+		*(iterator+32) = ereasedVal;
+
+		if ((p1_size + p2_size) < 1){
+			empties[empties_size] = room_id;
+			++empties_size;
+		}else{
+			printf("Room n°%d : ", room_id);
+			if(p1_size > 0){
+				ereasedVal = *(p1+32);
+				*(p1+32) = '\0';
+				printf("%s ", p1);
+				*(p1+32) = ereasedVal;
+			}
+			if(p2_size > 0){
+				ereasedVal = *(p2+32);
+				*(p2+32) = '\0';
+				printf("%s ", p2);
+				*(p2+32) = ereasedVal;
+			}
+			printf("\n");
+		}
+		iterator+=33;
+		/*printf("\n");*/
+	}
+	printf("\nEmpty rooms : ");
+	for(i = 0; i < empties_size; ++i){
+		printf("%d ",empties[i]);
+	}
+	printf("\n\n");
 	client_state = OTHELLO_CLIENT_STATE_CONNECTED;
 }
 
 void othello_server_room_join(int socket_descriptor){
 	char server_answer;
 	othello_read_mesg(socket_descriptor,&server_answer,sizeof(server_answer));
+	system("clear");	
 	if(server_answer == OTHELLO_SUCCESS){
 		client_state = OTHELLO_CLIENT_STATE_INROOM;
 		printf("You are now into a room\n");
@@ -689,6 +781,21 @@ void othello_server_room_join(int socket_descriptor){
 	}else{
 		printf("Impossible to join the room ...\n");
 		client_state = OTHELLO_CLIENT_STATE_CONNECTED;
+	}
+}
+
+void othello_server_room_leave(int socket_descriptor){
+	char server_answer;
+	othello_read_mesg(socket_descriptor,&server_answer,sizeof(server_answer));
+	system("clear");
+	if(server_answer == OTHELLO_SUCCESS){
+		client_state = OTHELLO_CLIENT_STATE_CONNECTED;
+		printf("You leaved the room!\n");
+		printf("You can join a new by typing /join or display the list of them with /list\n");
+	}else{
+		client_state = OTHELLO_CLIENT_STATE_INROOM;
+		printf("Server refused to let you go ...\n");
+		printf("Try again or type /ready to start playing\n");
 	}
 }
 
@@ -705,19 +812,23 @@ void othello_server_message(int socket_descriptor){
 void othello_server_ready(int socket_descriptor){
 	char server_answer;
 	othello_read_mesg(socket_descriptor,&server_answer,sizeof(server_answer));
+	system("clear");
 	if(server_answer == OTHELLO_SUCCESS){
 		client_state = OTHELLO_CLIENT_STATE_READY;
 		printf("You are now ready to play\n");
 		printf("Wait for server to say you when to play ...\n");
+		printf("You can still use /notready to unready yourself\n");
 	}else{
 		client_state = OTHELLO_CLIENT_STATE_INROOM;
 		printf("Server can't ready you ...\n");
+		printf("Try again or type /leave to leave the room\n");
 	}
 }
 
 void othello_server_not_ready(int socket_descriptor){
 	char server_answer;
 	othello_read_mesg(socket_descriptor,&server_answer,sizeof(server_answer));
+	system("clear");
 	if(server_answer == OTHELLO_SUCCESS){
 		client_state = OTHELLO_CLIENT_STATE_READY;
 		printf("You are now unready to play\n");
@@ -725,12 +836,14 @@ void othello_server_not_ready(int socket_descriptor){
 	}else{
 		client_state = OTHELLO_CLIENT_STATE_INROOM;
 		printf("Server can't unready you ...\n");
+		printf("Try again or type /leave to leave the room\n");
 	}
 }
 
 void othello_server_play(int socket_descriptor){
 	char server_answer;
 	othello_read_mesg(socket_descriptor,&server_answer,sizeof(server_answer));
+	system("clear");
 	if(server_answer == OTHELLO_SUCCESS){
 		client_state = OTHELLO_CLIENT_STATE_WAITING;
 		printf("Votre coup a ete valide\n");
@@ -744,12 +857,15 @@ void othello_server_play(int socket_descriptor){
 void othello_server_giveup(int socket_descriptor){
 	char server_answer;
 	othello_read_mesg(socket_descriptor,&server_answer,sizeof(server_answer));
+	system("clear");
 	if(server_answer == OTHELLO_SUCCESS){
 		client_state = OTHELLO_CLIENT_STATE_INROOM;
 		printf("You gave up and lamentably lost!\n");
+		printf("Type /ready to start a new game or /leave to leave the room!\n");
 	}else{
 		client_state = OTHELLO_CLIENT_STATE_PLAYING;
 		printf("Server refused give up ...\n");
+		printf("Just play or leave the game by typing /exit ...\n");
 	}
 }
 
@@ -786,7 +902,7 @@ void othello_notif_not_ready(int socket_descriptor){
 }
 
 void othello_notif_play(int socket_descriptor, char color){
-	char server_answer[2];	
+	char server_answer[2];
 	printf("Opponent just played!\n");
 	othello_read_mesg(socket_descriptor,server_answer,sizeof(server_answer));
 	xMove = server_answer[0];
@@ -796,6 +912,7 @@ void othello_notif_play(int socket_descriptor, char color){
 
 void othello_notif_your_turn(int socket_descriptor){
 	client_state = OTHELLO_CLIENT_STATE_PLAYING;
+	system("clear");
 	printf("This is your turn to play, enter a move:\n");
 	othello_display_moves();
 	othello_display_board();
@@ -809,6 +926,7 @@ void othello_notif_start(int socket_descriptor){
 		my_color = othello_board[OTHELLO_BOARD_LENGTH/2-1][OTHELLO_BOARD_LENGTH/2];
 		opponent_color = othello_board[OTHELLO_BOARD_LENGTH/2-1][OTHELLO_BOARD_LENGTH/2-1];
 		client_state = OTHELLO_CLIENT_STATE_PLAYING;
+		system("clear");
 		printf("Your play with '%c' tokens!\n",my_color);
 		printf("You start, enter your move:\n");
 		othello_display_moves();
@@ -818,6 +936,7 @@ void othello_notif_start(int socket_descriptor){
 		my_color = othello_board[OTHELLO_BOARD_LENGTH/2-1][OTHELLO_BOARD_LENGTH/2-1];
 		opponent_color = othello_board[OTHELLO_BOARD_LENGTH/2-1][OTHELLO_BOARD_LENGTH/2];
 		client_state = OTHELLO_CLIENT_STATE_WAITING;
+		system("clear");
 		printf("Your play with '%c' tokens!\n",my_color);
 		printf("Opponent play first, please wait ...\n");
 	}
@@ -834,6 +953,7 @@ void othello_notif_giveup(int socket_descriptor){
 void othello_notif_end(int socket_descriptor){
 	char server_answer;
 	othello_read_mesg(socket_descriptor,&server_answer,sizeof(server_answer));
+	system("clear");
 	othello_display_board();
 	if(server_answer){
 		printf("Game ended, you won!\n");
@@ -841,6 +961,7 @@ void othello_notif_end(int socket_descriptor){
 		printf("Game ended, you lost!\n");
 	}
 	client_state = OTHELLO_CLIENT_STATE_INROOM;
+	printf("You can use /ready to start a new one or /leave to exit the room\n");
 }
 
 /************************************/
@@ -875,6 +996,9 @@ void* othello_write_thread(void* sock){
 				case OTHELLO_CLIENT_INPUT_JOIN:
 					othello_choose_room(socket_descriptor, usr_input, input_len);
 				break;
+				case OTHELLO_CLIENT_INPUT_LEAVE:
+					othello_send_room_leave(socket_descriptor);
+				break;
 				case OTHELLO_CLIENT_INPUT_READY:
 					othello_send_ready(socket_descriptor);
 				break;
@@ -883,6 +1007,7 @@ void* othello_write_thread(void* sock){
 				break;
 				case OTHELLO_CLIENT_INPUT_HELP:
 					othello_display_help();
+				break;
 				case OTHELLO_CLIENT_INPUT_PLAY:
 					othello_send_move(socket_descriptor, usr_input, input_len);
 				break;
@@ -923,6 +1048,7 @@ void* othello_read_thread(void* sock){
 				othello_server_room_join(socket_descriptor);
 			break;
 			case OTHELLO_QUERY_ROOM_LEAVE:
+				othello_server_room_leave(socket_descriptor);
 			break;
 			case OTHELLO_QUERY_MESSAGE:
 				othello_server_message(socket_descriptor);
@@ -1014,6 +1140,7 @@ int main(int argc, char **argv) {
 		exit(1);
     }
 	
+	system("clear");
 	printf("connexion succed ! \n");
 
 	if(pthread_create(&thread_write, NULL, othello_write_thread, &socket_descriptor)) {

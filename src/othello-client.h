@@ -29,7 +29,8 @@ enum othello_client_enum_e{
 	OTHELLO_CLIENT_INPUT_MESG,
 	OTHELLO_CLIENT_INPUT_AUTO,
 	OTHELLO_CLIENT_INPUT_HELP,
-	OTHELLO_CLIENT_INPUT_GIVEUP,	
+	OTHELLO_CLIENT_INPUT_GIVEUP,
+	OTHELLO_CLIENT_INPUT_LEAVE,
 	OTHELLO_CLIENT_INPUT_EXIT,
 	OTHELLO_CLIENT_INPUT_FAIL
 };
@@ -70,6 +71,7 @@ hostent* othello_ask_server_adress();
 void othello_choose_nickname(int, char*, size_t);
 void othello_ask_list(int);
 void othello_choose_room(int, char*, size_t);
+void othello_send_room_leave(int);
 void othello_send_ready(int);
 void othello_send_not_ready(int);
 void othello_send_move(int, char*, size_t);
@@ -84,6 +86,7 @@ void othello_send_exit(int);
 void othello_server_connect(int);
 void othello_server_room_list(int);
 void othello_server_room_join(int);
+void othello_server_room_leave(int);
 void othello_server_message(int);
 void othello_server_ready(int);
 void othello_server_not_ready(int);
