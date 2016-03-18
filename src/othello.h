@@ -48,12 +48,7 @@ enum othello_state_e {
 
 enum othello_status_e {
   OTHELLO_SUCCESS,
-  OTHELLO_FAILURE,
-  OTHELLO_ANSWER_READ_ERROR,
-  OTHELLO_GAME_FINISH,
-  OTHELLO_ROOM_FULL_ERROR,
-  OTHELLO_ROOM_UNKNOWN_ERROR
-  /*...*/
+  OTHELLO_FAILURE
 };
 
 typedef enum othello_query_e othello_query_t;

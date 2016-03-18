@@ -9,6 +9,7 @@
 #include "othello-server.h"
 
 #include <arpa/inet.h>
+#include <errno.h>
 #include <getopt.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -21,15 +22,17 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <syslog.h>
+#include <time.h>
 #include <unistd.h>
 
 struct othello_player_s {
   pthread_t thread;
   int socket;
-  char name[OTHELLO_PLAYER_NAME_LENGTH];
+  char name[OTHELLO_PLAYER_NAME_LENGTH]; /*not necessarily a null-terminated
+                                            byte string*/
   othello_room_t *room;
-  pthread_mutex_t mutex;
-  bool ready;
+  pthread_mutex_t mutex; /*to protect the socket on write*/
+  bool ready;            /*if ready to play or if able to play*/
   othello_state_t state;
 };
 
@@ -39,6 +42,9 @@ struct othello_room_s {
   othello_player_t *grid[OTHELLO_BOARD_LENGTH][OTHELLO_BOARD_LENGTH];
 };
 
+/**
+ *
+ */
 static othello_room_t othello_server_rooms[OTHELLO_NUMBER_OF_ROOMS];
 static othello_room_t othello_server_players[OTHELLO_NUMBER_OF_PLAYERS];
 static int othello_server_socket;
@@ -86,6 +92,9 @@ ssize_t othello_write_all(int fd, void *buf, size_t count) {
  */
 void othello_log(int priority, const char *format, ...) {
   va_list ap;
+  char date[32];
+  time_t t;
+  struct tm *tmp;
 
   va_start(ap, format);
 
@@ -93,35 +102,13 @@ void othello_log(int priority, const char *format, ...) {
   if (othello_server_daemon) {
     vsyslog(priority, format, ap);
   } else {
-    switch (priority) {
-    case LOG_EMERG:
-      fputs("EMERGENCY ", stdout);
-      break;
-    case LOG_ALERT:
-      fputs("ALERT     ", stdout);
-      break;
-    case LOG_CRIT:
-      fputs("CRITICAL  ", stdout);
-      break;
-    case LOG_ERR:
-      fputs("ERROR     ", stdout);
-      break;
-    case LOG_WARNING:
-      fputs("WARNING   ", stdout);
-      break;
-    case LOG_NOTICE:
-      fputs("NOTICE    ", stdout);
-      break;
-    case LOG_INFO:
-      fputs("INFO      ", stdout);
-      break;
-    case LOG_DEBUG:
-      fputs("DEBUG     ", stdout);
-      break;
-    default:
-      fputs("          ", stdout);
-      break;
+    memset(date, 0, sizeof(date));
+    t = time(NULL);
+    tmp = localtime(&t);
+    if (tmp != NULL) {
+      strftime(date, sizeof(date), "%a %d %H:%M:%S", tmp);
     }
+    printf("%s othello-server[%d]: ", date, getpid());
     vprintf(format, ap);
     putc('\n', stdout);
   }
@@ -135,7 +122,8 @@ void othello_player_end(othello_player_t *player) {
   char notif[1 + sizeof(player->name)];
   othello_player_t **player_cursor;
 
-  othello_log(LOG_INFO, "%p end", player);
+  othello_log(LOG_INFO, "player %p %d %s - logoff", player, player->socket,
+              player->name);
 
   if (player->state == OTHELLO_STATE_IN_GAME) {
     notif[0] = OTHELLO_NOTIF_GIVE_UP;
@@ -190,8 +178,6 @@ othello_status_t othello_handle_login(othello_player_t *player) {
   unsigned char protocol_version;
   char reply[2];
 
-  othello_log(LOG_INFO, "%p login #1", player);
-
   status = OTHELLO_SUCCESS;
 
   reply[0] = OTHELLO_QUERY_LOGIN;
@@ -217,7 +203,8 @@ othello_status_t othello_handle_login(othello_player_t *player) {
   }
   pthread_mutex_unlock(&(player->mutex));
 
-  othello_log(LOG_INFO, "%p login #2", player);
+  othello_log(LOG_INFO, "player %p %d %s - login", player, player->socket,
+              player->name);
 
   return status;
 }
@@ -235,8 +222,6 @@ othello_status_t othello_handle_room_list(othello_player_t *player) {
   char room_size;
   othello_player_t **player_cursor;
   othello_room_t *room_cursor;
-
-  othello_log(LOG_INFO, "%p room list #1", player);
 
   status = OTHELLO_SUCCESS;
 
@@ -274,7 +259,8 @@ othello_status_t othello_handle_room_list(othello_player_t *player) {
   }
   pthread_mutex_unlock(&(player->mutex));
 
-  othello_log(LOG_INFO, "%p room list #3", player);
+  othello_log(LOG_INFO, "player %p %d %s - room list", player, player->socket,
+              player->name);
 
   return status;
 }
@@ -292,14 +278,10 @@ othello_status_t othello_handle_room_join(othello_player_t *player) {
 
   status = OTHELLO_SUCCESS;
 
-  othello_log(LOG_INFO, "%p room join #1", player);
-
   reply[0] = OTHELLO_QUERY_ROOM_JOIN;
   reply[1] = OTHELLO_FAILURE;
 
   notif[0] = OTHELLO_NOTIF_ROOM_JOIN;
-
-  othello_log(LOG_INFO, "%p room join #2", player);
 
   if (othello_read_all(player->socket, &room_id, sizeof(room_id)) <= 0) {
     status = OTHELLO_FAILURE;
@@ -336,6 +318,9 @@ othello_status_t othello_handle_room_join(othello_player_t *player) {
       }
     }
     pthread_mutex_unlock(&(room->mutex));
+
+    othello_log(LOG_INFO, "player %p %d %s - join room: %d", player,
+                player->socket, player->name, room_id);
   }
 
   pthread_mutex_lock(&(player->mutex));
@@ -343,8 +328,6 @@ othello_status_t othello_handle_room_join(othello_player_t *player) {
     status = OTHELLO_FAILURE;
   }
   pthread_mutex_unlock(&(player->mutex));
-
-  othello_log(LOG_INFO, "%p room join #3", player);
 
   return status;
 }
@@ -357,8 +340,6 @@ othello_status_t othello_handle_room_leave(othello_player_t *player) {
   char reply[2];
   char notif[1 + OTHELLO_PLAYER_NAME_LENGTH];
   othello_player_t **player_cursor;
-
-  othello_log(LOG_INFO, "%p room leave #1", player);
 
   status = OTHELLO_SUCCESS;
 
@@ -387,6 +368,9 @@ othello_status_t othello_handle_room_leave(othello_player_t *player) {
 
     player->room = NULL;
     player->state = OTHELLO_STATE_CONNECTED;
+
+    othello_log(LOG_INFO, "player %p %d %s - leave room", player,
+                player->socket, player->name);
   }
 
   pthread_mutex_lock(&(player->mutex));
@@ -394,8 +378,6 @@ othello_status_t othello_handle_room_leave(othello_player_t *player) {
     status = OTHELLO_FAILURE;
   }
   pthread_mutex_unlock(&(player->mutex));
-
-  othello_log(LOG_INFO, "%p room leave #2", player);
 
   return status;
 }
@@ -410,8 +392,6 @@ othello_status_t othello_handle_message(othello_player_t *player) {
   othello_player_t **player_cursor;
 
   status = OTHELLO_SUCCESS;
-
-  othello_log(LOG_INFO, "%p message #1", player);
 
   reply[0] = OTHELLO_QUERY_MESSAGE;
   reply[1] = OTHELLO_FAILURE;
@@ -439,6 +419,10 @@ othello_status_t othello_handle_message(othello_player_t *player) {
       }
     }
     pthread_mutex_unlock(&(player->room->mutex));
+
+    othello_log(LOG_INFO, "player %p %d %s - message: %s", player,
+                player->socket, player->name,
+                notif + 1 + OTHELLO_PLAYER_NAME_LENGTH);
   }
 
   pthread_mutex_lock(&(player->mutex));
@@ -446,8 +430,6 @@ othello_status_t othello_handle_message(othello_player_t *player) {
     status = OTHELLO_FAILURE;
   }
   pthread_mutex_unlock(&(player->mutex));
-
-  othello_log(LOG_INFO, "%p message #2", player);
 
   return status;
 }
@@ -463,8 +445,6 @@ othello_status_t othello_handle_ready(othello_player_t *player) {
   othello_player_t **player_cursor;
   int players_ready;
 
-  othello_log(LOG_INFO, "%p ready #1", player);
-
   status = OTHELLO_SUCCESS;
 
   reply[0] = OTHELLO_QUERY_READY;
@@ -479,6 +459,10 @@ othello_status_t othello_handle_ready(othello_player_t *player) {
     memcpy(notif_ready + 1, player->name, OTHELLO_PLAYER_NAME_LENGTH);
     players_ready = 1;
 
+    othello_log(LOG_INFO, "player %p %d %s - ready", player, player->socket,
+                player->name);
+
+    /*send notif ready to other players*/
     pthread_mutex_lock(&(player->room->mutex));
     for (player_cursor = player->room->players;
          player_cursor < player->room->players + OTHELLO_ROOM_LENGTH;
@@ -494,21 +478,19 @@ othello_status_t othello_handle_ready(othello_player_t *player) {
       }
     }
 
-    othello_log(LOG_INFO, "%p ready #2", player);
-
     pthread_mutex_lock(&(player->mutex));
     if (othello_write_all(player->socket, &reply, sizeof(reply)) <= 0) {
       status = OTHELLO_FAILURE;
     }
     pthread_mutex_unlock(&(player->mutex));
 
-    othello_log(LOG_INFO, "%p ready %d / %d", player, players_ready,
+    othello_log(LOG_INFO, "room %p - %d/%d ready", player->room, players_ready,
                 OTHELLO_ROOM_LENGTH);
 
     if (players_ready == OTHELLO_ROOM_LENGTH) {
       memset(player->room->grid, 0, sizeof(player->room->grid));
 
-      othello_log(LOG_INFO, "%p ready #3", player);
+      othello_log(LOG_INFO, "room %p - game start", player->room);
 
       for (player_cursor = player->room->players;
            player_cursor < player->room->players + OTHELLO_ROOM_LENGTH;
@@ -552,8 +534,6 @@ othello_status_t othello_handle_not_ready(othello_player_t *player) {
   char notif_not_ready[1 + OTHELLO_PLAYER_NAME_LENGTH];
   othello_player_t **player_cursor;
 
-  othello_log(LOG_INFO, "%p not ready #1", player);
-
   status = OTHELLO_SUCCESS;
 
   reply[0] = OTHELLO_QUERY_NOT_READY;
@@ -579,7 +559,8 @@ othello_status_t othello_handle_not_ready(othello_player_t *player) {
     }
     pthread_mutex_unlock(&(player->room->mutex));
 
-    othello_log(LOG_INFO, "%p not ready #2", player);
+    othello_log(LOG_INFO, "%p %d %s - not ready", player, player->socket,
+                player->name);
   }
 
   pthread_mutex_lock(&(player->mutex));
@@ -587,8 +568,6 @@ othello_status_t othello_handle_not_ready(othello_player_t *player) {
     status = OTHELLO_FAILURE;
   }
   pthread_mutex_unlock(&(player->mutex));
-
-  othello_log(LOG_INFO, "%p not ready #3", player);
 
   return status;
 }
@@ -609,8 +588,6 @@ othello_status_t othello_handle_play(othello_player_t *player) {
   othello_player_t *player_turn;
   int best_score, score;
 
-  othello_log(LOG_INFO, "%p play #1", player);
-
   status = OTHELLO_SUCCESS;
 
   reply[0] = OTHELLO_QUERY_PLAY;
@@ -628,12 +605,8 @@ othello_status_t othello_handle_play(othello_player_t *player) {
   if (status == OTHELLO_SUCCESS && player->state == OTHELLO_STATE_IN_GAME &&
       player->ready) {
 
-    othello_log(LOG_INFO, "%p play [%d, %d]", player, stroke[0], stroke[1]);
-    if (othello_game_is_stroke_valid(player, stroke[0], stroke[1])) {
-      othello_log(LOG_INFO, "%p play stroke is valid", player);
-    } else {
-      othello_log(LOG_INFO, "%p play stroke is invalid", player);
-    }
+    othello_log(LOG_INFO, "player %p %d %s - play: [%d,%d]", player,
+                player->socket, player->name, stroke[0], stroke[1]);
 
     pthread_mutex_lock(&(player->room->mutex));
     if (othello_game_play_stroke(player, stroke[0], stroke[1]) ==
@@ -691,11 +664,10 @@ othello_status_t othello_handle_play(othello_player_t *player) {
       player_cursor++;
     } while (player_cursor != player_next);
 
-    othello_log(LOG_INFO, "%p play #2 -- %p", player, player_turn);
-
     /*game over*/
     if (player_turn == NULL) {
-      othello_log(LOG_INFO, "%p play #3", player);
+      othello_log(LOG_INFO, "room %p - game over: winner: %p %d %s",
+                  player->room, player, player->socket, player->name);
 
       for (player_cursor = player->room->players;
            player_cursor < player->room->players + OTHELLO_ROOM_LENGTH;
@@ -716,6 +688,9 @@ othello_status_t othello_handle_play(othello_player_t *player) {
         }
       }
     } else {
+      othello_log(LOG_INFO, "room %p - game continue: next player: %p %d %s",
+                  player->room, player, player->socket, player->name);
+
       player_turn->ready = true;
       pthread_mutex_lock(&(player_turn->mutex));
       othello_write_all(player_turn->socket, notif_your_turn,
@@ -731,8 +706,6 @@ othello_status_t othello_handle_play(othello_player_t *player) {
     }
     pthread_mutex_unlock(&(player->mutex));
   }
-
-  othello_log(LOG_INFO, "%p play #4", player);
 
   return status;
 }
@@ -772,6 +745,9 @@ othello_status_t othello_handle_give_up(othello_player_t *player) {
       }
     }
     pthread_mutex_unlock(&(player->room->mutex));
+
+    othello_log(LOG_INFO, "player %p %d %s - give up", player, player->socket,
+                player->name);
   }
 
   pthread_mutex_lock(&(player->mutex));
@@ -793,11 +769,10 @@ void *othello_player_start(void *arg) {
 
   player = (othello_player_t *)arg;
 
-  othello_log(LOG_INFO, "%p start", player);
+  othello_log(LOG_INFO, "%p %d %s - connect", player, player->socket,
+              player->name);
 
   while (othello_read_all(player->socket, &query, sizeof(query)) > 0) {
-    othello_log(LOG_INFO, "%p read query %d", player, query);
-
     switch (query) {
     case OTHELLO_QUERY_LOGIN:
       status = othello_handle_login(player);
@@ -850,7 +825,6 @@ int othello_create_socket_stream(unsigned short port) {
   struct sockaddr_in address;
 
   if ((socket_stream = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-    othello_log(LOG_ERR, "socket");
     return socket_stream;
   }
 
@@ -862,13 +836,11 @@ int othello_create_socket_stream(unsigned short port) {
   optval = 1;
   if ((status = setsockopt(socket_stream, SOL_SOCKET, SO_REUSEADDR, &optval,
                            sizeof(int))) < 0) {
-    othello_log(LOG_ERR, "setsockopt");
     return status;
   }
 
   if ((status = bind(socket_stream, (struct sockaddr *)&address,
                      sizeof(struct sockaddr_in))) < 0) {
-    othello_log(LOG_ERR, "bind");
     return status;
   }
 
@@ -1238,6 +1210,7 @@ void othello_print_help(void) {
  *
  */
 int main(int argc, char *argv[]) {
+  int status;
   othello_player_t *player;
   othello_room_t *room_cursor;
   unsigned short port;
@@ -1300,49 +1273,46 @@ int main(int argc, char *argv[]) {
 
   /* open socket */
   if ((othello_server_socket = othello_create_socket_stream(port)) < 0) {
-    othello_log(LOG_ERR, "othello_create_socket_stream");
+    othello_log(LOG_ERR, strerror(errno));
     return EXIT_FAILURE;
   }
 
-  if (listen(othello_server_socket, SOMAXCONN)) {
-    othello_log(LOG_ERR, "listen");
+  if ((status = listen(othello_server_socket, SOMAXCONN)) < 0) {
+    othello_log(LOG_ERR, strerror(status));
     return EXIT_FAILURE;
   }
 
-  othello_log(LOG_INFO, "server listening on port %d", port);
+  othello_log(LOG_INFO, "server - listen on port: %d", port);
 
   for (;;) {
     if ((player = malloc(sizeof(othello_player_t))) == NULL) {
-      othello_log(LOG_ERR, "malloc");
-      return EXIT_FAILURE;
+      status = errno;
+      break;
     }
 
     memset(player, 0, sizeof(othello_player_t));
     if (pthread_mutex_init(&(player->mutex), NULL)) {
-      othello_log(LOG_ERR, "pthread_mutex_init");
-      return EXIT_FAILURE;
+      break;
     }
 
     if ((player->socket = accept(othello_server_socket, NULL, NULL)) < 0) {
-      othello_log(LOG_ERR, "accept");
-      return EXIT_FAILURE;
+      break;
     }
 
     if (pthread_mutex_init(&(player->mutex), NULL)) {
-      othello_log(LOG_ERR, "pthread_mutex_init");
-      return EXIT_FAILURE;
+      break;
     }
 
     if (pthread_create(&(player->thread), NULL, othello_player_start, player)) {
-      othello_log(LOG_ERR, "pthread_create");
-      return EXIT_FAILURE;
+      break;
     }
 
     if (pthread_detach(player->thread)) {
-      othello_log(LOG_ERR, "pthread_detach");
-      return EXIT_FAILURE;
+      break;
     }
   }
 
-  return EXIT_SUCCESS;
+  othello_log(LOG_ERR, strerror(status));
+
+  return EXIT_FAILURE;
 }
