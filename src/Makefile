@@ -1,16 +1,20 @@
-# Alexis Giraudet
+#Alexis Giraudet
 
-.PHONY: clean
+.PHONY : clean
 
-CFLAGS = -ansi -pedantic -Wall
-CPPFLAGS = -D _REENTRANT
-LDLIBS = -lpthread
+             CFLAGS = -ansi - pedantic - Wall CPPFLAGS = -D _REENTRANT LDLIBS =
+                          -lpthread
 
-all: othello-client othello-server
+                              all : othello -
+                          client othello - server
 
-othello-client: othello-client.c
+                                               othello -
+                          client : othello -
+                                   client.c
 
-othello-server: othello-server.c
+                                       othello -
+                                   server : othello -
+                                            server.c
 
-clean:
-	-rm othello-client othello-server
+                                                clean : -rm othello -
+                                            client othello - server
